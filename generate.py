@@ -5,13 +5,20 @@ from reportlab.lib.pagesizes import landscape, A4
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import io
+from tkinter import filedialog
 
 # Load Excel file
-excel_file = "candidates.xlsx"
+excel_file = filedialog.askopenfilename(title="Select Excel file", filetypes=[("Excel files", "*.xlsx")])
+if not excel_file:
+    print("No Excel file selected. Exiting...")
+    exit()
 df = pd.read_excel(excel_file)
 
 # Load PDF template
-template_path = "certificate.pdf"
+template_path = filedialog.askopenfilename(title="Select certificate template", filetypes=[("PDF files", "*.pdf")])
+if not template_path:
+    print("No template selected. Exiting...")
+    exit()
 pdf_reader = PdfReader(template_path)
 
 # Font settings
@@ -29,17 +36,12 @@ for index, row in df.iterrows():
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=landscape(A4))
     can.setFont("Arial", 18)
-    can.setFillColor("#FF0000") 
-    
-
-    # # Center align text
-    # name_x = page_width / 2 - 50  # Adjust for dynamic centering
-    # cert_x = page_width / 2 - (len(cert_number) * 2) # Slightly left for balance
     
     # Add Name & Certificate Number at adjusted positions
-    can.drawString(405, 275, f"{name}")
+    can.setFillColor("#FF0000")  # Set color to red for name
+    can.drawString(405, 275, name)  # f-string not needed for single variable
+    can.setFillColor("#000000")  # Set color to black for certificate number (white would be invisible)
     can.drawString(100, 555, f"Cert No: {cert_number}")
-
     can.save()
     
     # Merge with template
