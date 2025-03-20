@@ -1,0 +1,19 @@
+# Python virtual environment
+venv/
+.venv/
+venv/*
+.venv/*
+
+# Generated certificates
+Certificate_*.pdf
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo 
