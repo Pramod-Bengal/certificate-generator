@@ -9,6 +9,13 @@ from tkinter import filedialog, messagebox, Tk, Checkbutton, Button, Label, IntV
 import re
 import os
 
+# Create output directories if they don't exist
+def ensure_output_dirs():
+    dirs = ['output_vertical', 'output_horizontal']
+    for dir_name in dirs:
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+            print(f"Created directory: {dir_name}")
 
 # Load Excel file
 excel_file = filedialog.askopenfilename(title="Select Excel file", filetypes=[("Excel files", "*.xlsx")])
@@ -59,6 +66,9 @@ try:
         print("No orientations selected. Exiting...")
         exit()
 
+    # Create output directories
+    ensure_output_dirs()
+
     # Function to sanitize filename
     def sanitize_filename(filename):
         # Replace invalid characters with underscores
@@ -72,14 +82,14 @@ try:
             # Coordinates for vertical orientation
             name_x, name_y = 280,470
             cert_x, cert_y = 425, 820
-            output_prefix = "Vertical_"
+            output_dir = "output_vertical"
         else:
             template_path = "cert_horizontal.pdf"
             page_size = landscape(A4)
             # Coordinates for horizontal orientation
             name_x, name_y = 405, 275
             cert_x, cert_y = 5, 583
-            output_prefix = "Horizontal_"
+            output_dir = "output_horizontal"
 
         # Load PDF template
         pdf_reader = PdfReader(template_path)
@@ -122,11 +132,14 @@ try:
             output.add_page(page)
             
             # Save output file with orientation prefix and sanitized filename
-            output_filename = sanitize_filename(f"{output_prefix}Certificate_{cert_number}-{name}.pdf")
-            with open(output_filename, "wb") as outputStream:
+            output_filename = sanitize_filename(f"Certificate_{cert_number}-{name}.pdf")
+            output_path = os.path.join(output_dir, output_filename)
+            with open(output_path, "wb") as outputStream:
                 output.write(outputStream)
             
-            print(f"Generated: {output_filename}")
+            print(f"Generated: {output_path}")
+            # Reset canvas by creating a new one
+
 
     # Generate certificates for each selected orientation
     for orientation_type in orientations:

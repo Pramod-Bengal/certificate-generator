@@ -9,6 +9,8 @@ fonts/
 
 # Generated certificates
 Certificate_*.pdf
+output_horizontal/
+output_vertical/
 
 # Python cache files
 __pycache__/
