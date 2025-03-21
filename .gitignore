@@ -4,6 +4,9 @@ venv/
 venv/*
 .venv/*
 
+# Fonts
+fonts/
+
 # Generated certificates
 Certificate_*.pdf
 
