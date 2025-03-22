@@ -94,6 +94,26 @@ pyinstaller --onefile --windowed --add-data "arial.ttf;." --add-data "arialbd.tt
    - Confirm column names are exactly "Name" and "Certificate_Number"
    - Make sure the Excel file is not open in another program
 
+## Repository Access and Security
+
+### Access Control
+- This is a private repository accessible only to authorized EyeQDotnet Pvt. team members
+- Access requests must be approved by repository administrators
+- Team members must have 2FA enabled on their GitHub accounts
+
+### Security Guidelines
+1. Never commit sensitive data directly to the repository
+2. Use environment variables for sensitive configurations
+3. Keep your access tokens and credentials secure
+4. Report any security concerns to the repository administrators immediately
+
+### Getting Access
+To request access to this repository:
+1. Ensure you have a GitHub account with 2FA enabled
+2. Contact the repository administrator with your GitHub username
+3. Wait for access confirmation
+4. Set up your local development environment following the installation instructions
+
 ## Copyright
 
 © 2024 EyeQDotnet Pvt. All rights reserved.
