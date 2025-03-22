@@ -4,6 +4,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import landscape, A4, portrait
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
+from reportlab.lib.colors import CMYKColor, Color
 import io
 from tkinter import filedialog, messagebox, Tk, Checkbutton, Button, Label, IntVar
 import re
@@ -11,11 +12,15 @@ import os
 
 # Create output directories if they don't exist
 def ensure_output_dirs():
-    dirs = ['output_vertical', 'output_horizontal']
-    for dir_name in dirs:
-        if not os.path.exists(dir_name):
-            os.makedirs(dir_name)
-            print(f"Created directory: {dir_name}")
+    base_dirs = ['output_vertical', 'output_horizontal']
+    color_spaces = ['CMYK', 'RGB']
+    
+    for base_dir in base_dirs:
+        for color_space in color_spaces:
+            dir_name = os.path.join(base_dir, color_space)
+            if not os.path.exists(dir_name):
+                os.makedirs(dir_name)
+                print(f"Created directory: {dir_name}")
 
 # Load Excel file
 excel_file = filedialog.askopenfilename(title="Select Excel file", filetypes=[("Excel files", "*.xlsx")])
@@ -24,9 +29,9 @@ if not excel_file:
     exit()
 df = pd.read_excel(excel_file)
 
-# Create orientation selection window
+# Create selection window
 root = Tk()
-root.title("Select Certificate Orientations")
+root.title("Certificate Generation Settings")
 root.geometry("300x150")
 
 # Variables to store checkbox states
@@ -62,6 +67,7 @@ root.mainloop()
 try:
     # Get the selected orientations
     orientations = getattr(root, 'orientations', [])
+    
     if not orientations:
         print("No orientations selected. Exiting...")
         exit()
@@ -71,25 +77,39 @@ try:
 
     # Function to sanitize filename
     def sanitize_filename(filename):
-        # Replace invalid characters with underscores
         return re.sub(r'[<>:"/\\|?*]', '_', filename)
 
-    # Function to generate certificates for a specific orientation
-    def generate_certificates(orientation_type):
+    # Function to get colors based on color space
+    def get_colors(color_space):
+        if color_space == 'cmyk':
+            # CMYK colors for printing
+            name_color = CMYKColor(0, 1, 1, 0)  # Red in CMYK
+            cert_color = CMYKColor(0, 0, 0, 0)  # White in CMYK
+        else:
+            # RGB colors for digital
+            name_color = Color(1, 0, 0)  # Red in RGB
+            cert_color = Color(1, 1, 1)  # White in RGB
+        return name_color, cert_color
+
+    # Function to generate certificates for a specific orientation and color space
+    def generate_certificates(orientation_type, color_space):
         if orientation_type == 'vertical':
             template_path = "cert_vertical.pdf"
             page_size = portrait(A4)
             # Coordinates for vertical orientation
             name_x, name_y = 280,470
             cert_x, cert_y = 425, 820
-            output_dir = "output_vertical"
+            base_dir = "output_vertical"
         else:
             template_path = "cert_horizontal.pdf"
             page_size = landscape(A4)
             # Coordinates for horizontal orientation
             name_x, name_y = 405, 275
             cert_x, cert_y = 5, 583
-            output_dir = "output_horizontal"
+            base_dir = "output_horizontal"
+
+        # Set output directory based on color space
+        output_dir = os.path.join(base_dir, color_space.upper())
 
         # Load PDF template
         pdf_reader = PdfReader(template_path)
@@ -104,6 +124,9 @@ try:
             messagebox.showerror("Font Error", "Could not load required fonts. Please make sure arial.ttf and arialbd.ttf are in the same directory.")
             return
 
+        # Get colors based on color space
+        name_color, cert_color = get_colors(color_space)
+
         # Output certificates
         for index, row in df.iterrows():
             name = row["Name"]
@@ -114,12 +137,12 @@ try:
             can = canvas.Canvas(packet, pagesize=page_size)
             
             # Add Name & Certificate Number at adjusted positions
-            can.setFont("Arial-Bold", 22)  # Using Arial Bold for name
-            can.setFillColor("#FF0000")  # Set color to red for name
-            can.drawString(name_x, name_y, name)  # f-string not needed for single variable
+            can.setFont("Arial-Bold", 22)
+            can.setFillColor(name_color)
+            can.drawString(name_x, name_y, name)
             
-            can.setFont("Arial-Bold", 17)  # Using Arial Bold for certificate number
-            can.setFillColor("white")  # Set color to white for certificate number
+            can.setFont("Arial-Bold", 17)
+            can.setFillColor(cert_color)
             can.drawString(cert_x, cert_y, f"{cert_number}")
             can.save()
             
@@ -127,24 +150,47 @@ try:
             packet.seek(0)
             new_pdf = PdfReader(packet)
             output = PdfWriter()
-            page = pdf_reader.pages[0]
-            page.merge_page(new_pdf.pages[0])
-            output.add_page(page)
             
-            # Save output file with orientation prefix and sanitized filename
-            output_filename = sanitize_filename(f"Certificate_{cert_number}-{name}.pdf")
-            output_path = os.path.join(output_dir, output_filename)
-            with open(output_path, "wb") as outputStream:
-                output.write(outputStream)
+            # Create a new PDF reader for each certificate to get a fresh template
+            template_reader = PdfReader(template_path)
+            template_page = template_reader.pages[0]
             
-            print(f"Generated: {output_path}")
-            # Reset canvas by creating a new one
-
-
-    # Generate certificates for each selected orientation
+            # Get the text page
+            text_page = new_pdf.pages[0]
+            
+            # Merge the pages (text on top of template)
+            template_page.merge_page(text_page)
+            
+            # Add the merged page to the output
+            output.add_page(template_page)
+            
+            # Generate output file
+            generate_output(output, output_dir, cert_number, name)
+            
+            # Clean up resources
+            packet.close()
+            del can
+            del new_pdf
+            del output
+            del template_reader
+            
+    # Save output file with orientation prefix and sanitized filename        
+    def generate_output(output, output_dir, cert_number, name):
+        output_filename = sanitize_filename(f"{cert_number}-{name}.pdf")
+        output_path = os.path.join(output_dir, output_filename)
+        with open(output_path, "wb") as outputStream:
+            output.write(outputStream)
+        print(f"Generated: {output_path}")
+    
+    # Generate certificates for each selected orientation and color space
     for orientation_type in orientations:
         print(f"\nGenerating {orientation_type} certificates...")
-        generate_certificates(orientation_type)
+        # Generate CMYK version
+        print(f"Generating CMYK version...")
+        generate_certificates(orientation_type, 'cmyk')
+        # Generate RGB version
+        print(f"Generating RGB version...")
+        generate_certificates(orientation_type, 'rgb')
 
     print("\nAll certificates generated successfully!")
 
