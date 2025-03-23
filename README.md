@@ -31,7 +31,7 @@ Ensure you have the following files in your project directory:
 1. Download the project files
 2. Install required Python packages:
 ```bash
-pip install pandas PyPDF2 reportlab
+pip install -r requirements.txt
 ```
 
 ## Usage
