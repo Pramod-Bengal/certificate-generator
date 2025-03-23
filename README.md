@@ -15,7 +15,6 @@ A proprietary certificate generation application developed for EyeQDotnet Pvt. T
 - Python 3.6 or higher
 - Required font files:
   - `arial.ttf`
-  - `arialbd.ttf` (Arial Bold)
 
 ## Required Files
 
@@ -70,7 +69,7 @@ pip install pyinstaller
 
 2. Create the executable:
 ```bash
-pyinstaller --onefile --windowed --add-data "arial.ttf;." --add-data "arialbd.ttf;." generate.py
+pyinstaller --onefile generate.py
 ```
 
 3. The executable will be created in the `dist` directory

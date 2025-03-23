@@ -37,3 +37,6 @@ __pycache__/
 *.der
 *.priv
 *.pub 
+
+# Zip file
+certificate-gen.zip
