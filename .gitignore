@@ -1,2 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Certificate outputs
 *.pdf
+temp_certificate.png
+
+# Excel and template files (optional if users provide them externally)
+*.xlsx
+*.png
 *.json
+
+# macOS and Windows junk
+.DS_Store
+Thumbs.db
+
+# Python virtual environment
+venv/
+.env/
