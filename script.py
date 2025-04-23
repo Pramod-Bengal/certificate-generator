@@ -44,48 +44,41 @@ class CertificateApp:
         self.setup_ui()
         
     def setup_ui(self):
-        self.master.title("Certificate Generator")
-        self.master.geometry("1000x700")
+        self.master.title("Certificate Generator") # Maximize the window on startup
         self.master.configure(padx=20, pady=20)
 
         # ---- Header ----
         header = tk.Label(self.master, text="📄 Certificate Generator", font=("Helvetica", 20, "bold"))
         header.pack(pady=(0, 10))
 
-        # ---- Top Buttons ----
-        top_frame = tk.Frame(self.master)
-        top_frame.pack(fill="x", pady=(0, 10))
+        # ---- Main Layout Frame ----
+        main_frame = tk.Frame(self.master)
+        main_frame.pack(fill="both", expand=True)
 
-        tk.Button(top_frame, text="Load Template", command=self.load_template).pack(side="left", padx=5)
-        tk.Button(top_frame, text="Load Excel", command=self.load_excel).pack(side="left", padx=5)
+        # ---- Left Panel (Controls) ----
+        left_panel = tk.Frame(main_frame)
+        left_panel.pack(side="left", fill="y", padx=(0, 20))
 
-        #---- Save Position Buttons ----
-        tk.Button(top_frame, text="Save Positions", command=self.save_positions).pack(side="left", padx=5)
-        tk.Button(top_frame, text="Load Positions", command=self.load_positions).pack(side="left", padx=5)
-        
-        # ---- Preview Section ----
-        tk.Button(top_frame, text="Preview Certificate", command=self.preview_certificate).pack(side="left", padx=5)
-
-
-        # ---- Canvas ----
-        self.canvas_frame = tk.Frame(self.master, relief="sunken", borderwidth=2)
-        self.canvas_frame.pack(pady=(0, 15), fill="both", expand=True)
-
-        self.canvas = tk.Canvas(self.canvas_frame, width=900, height=500, bg="white")
-        self.canvas.pack()
+        # ---- Load Buttons ----
+        load_frame = tk.LabelFrame(left_panel, text="Options", padx=10, pady=10)
+        load_frame.pack(fill="x", pady=(0, 10))
+        tk.Button(load_frame, text="Load Template", command=self.load_template).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Load Excel", command=self.load_excel).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Save Positions", command=self.save_positions).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Load Positions", command=self.load_positions).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Preview Certificate", command=self.preview_certificate).pack(fill="x", pady=2)
 
         # ---- Placeholder Toggles ----
-        toggle_frame = tk.LabelFrame(self.master, text="Toggle Attributes", padx=10, pady=10)
-        toggle_frame.pack(side="left", anchor="n", padx=(0, 20))
-
+        toggle_frame = tk.LabelFrame(left_panel, text="Toggle Attributes", padx=10, pady=10)
+        toggle_frame.pack(fill="x", pady=(10, 10))
         tk.Checkbutton(toggle_frame, text="Name", variable=self.include_name).pack(anchor="w")
         tk.Checkbutton(toggle_frame, text="ID", variable=self.include_id).pack(anchor="w")
         tk.Checkbutton(toggle_frame, text="Start Date", variable=self.include_start).pack(anchor="w")
         tk.Checkbutton(toggle_frame, text="End Date", variable=self.include_end).pack(anchor="w")
 
         # ---- Font Settings ----
-        font_frame = tk.LabelFrame(self.master, text="Font Settings", padx=10, pady=10)
-        font_frame.pack(side="left", anchor="n")
+        font_frame = tk.LabelFrame(left_panel, text="Font Settings", padx=10, pady=10)
+        font_frame.pack(fill="x", pady=(10, 10))
 
         for i, field in enumerate(self.font_settings):
             tk.Label(font_frame, text=field).grid(row=i, column=0, sticky="w", padx=5, pady=2)
@@ -93,13 +86,25 @@ class CertificateApp:
             tk.Spinbox(font_frame, from_=10, to=100, textvariable=self.font_settings[field]["size"], width=5).grid(row=i, column=2, padx=5)
             tk.Button(font_frame, text="Color", command=lambda f=field: self.choose_color(f)).grid(row=i, column=3, padx=5)
 
-        # ---- Generate Button ----
-        generate_btn = tk.Button(self.master, text="Generate Certificates", font=("Arial", 14), bg="#4CAF50", fg="white", command=self.generate_certificates)
-        generate_btn.pack(pady=20)
+        # ---- Center Canvas Area ----
+        center_panel = tk.Frame(main_frame)
+        center_panel.pack(side="left", fill="both", expand=True)
 
-        #---- Progress bar ----
-        self.progress = ttk.Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
-        self.progress.pack(pady=10)
+        self.canvas_frame = tk.Frame(center_panel, relief="sunken", borderwidth=2)
+        self.canvas_frame.pack(fill="both", expand=True)
+
+        self.canvas = tk.Canvas(self.canvas_frame, bg="white")
+        self.canvas.pack(fill="both", expand=True)
+
+        # ---- Bottom Buttons ----
+        bottom_frame = tk.Frame(self.master)
+        bottom_frame.pack(fill="x", pady=20)
+
+        generate_btn = tk.Button(bottom_frame, text="Generate Certificates", font=("Arial", 14), bg="#4CAF50", fg="white", command=self.generate_certificates)
+        generate_btn.pack(side="left", padx=20)
+
+        self.progress = ttk.Progressbar(bottom_frame, orient="horizontal", length=300, mode="determinate")
+        self.progress.pack(side="left", padx=10, expand=True)
 
     def save_positions(self):
         if not self.original_image:
