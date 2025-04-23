@@ -8,6 +8,8 @@ import re
 from tkinter import colorchooser
 import json
 import threading
+import sys
+import platform
 
 
 
@@ -18,12 +20,14 @@ class CertificateApp:
         self.master = root
         self.root = root
         self.root.title("Certificate Generator")
+        self.set_icon()  # Set the icon after initializing the window
 
         self.original_image = None
         self.display_image = None
         self.scale_x = 1
         self.scale_y = 1
-
+        self.template_path = None  # Add template_path attribute
+        self.excel_path = None  # Add excel_path attribute
 
         self.placeholders = {}  # Store placeholder references
 
@@ -44,7 +48,7 @@ class CertificateApp:
         self.setup_ui()
         
     def setup_ui(self):
-        self.master.title("Certificate Generator") # Maximize the window on startup
+        self.master.title("Certificate Generator")
         self.master.configure(padx=20, pady=20)
 
         # ---- Header ----
@@ -64,17 +68,30 @@ class CertificateApp:
         load_frame.pack(fill="x", pady=(0, 10))
         tk.Button(load_frame, text="Load Template", command=self.load_template).pack(fill="x", pady=2)
         tk.Button(load_frame, text="Load Excel", command=self.load_excel).pack(fill="x", pady=2)
-        tk.Button(load_frame, text="Save Positions", command=self.save_positions).pack(fill="x", pady=2)
-        tk.Button(load_frame, text="Load Positions", command=self.load_positions).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Save Project", command=self.save_project).pack(fill="x", pady=2)
+        tk.Button(load_frame, text="Load Project", command=self.load_project).pack(fill="x", pady=2)
         tk.Button(load_frame, text="Preview Certificate", command=self.preview_certificate).pack(fill="x", pady=2)
 
         # ---- Placeholder Toggles ----
         toggle_frame = tk.LabelFrame(left_panel, text="Toggle Attributes", padx=10, pady=10)
         toggle_frame.pack(fill="x", pady=(10, 10))
-        tk.Checkbutton(toggle_frame, text="Name", variable=self.include_name).pack(anchor="w")
-        tk.Checkbutton(toggle_frame, text="ID", variable=self.include_id).pack(anchor="w")
-        tk.Checkbutton(toggle_frame, text="Start Date", variable=self.include_start).pack(anchor="w")
-        tk.Checkbutton(toggle_frame, text="End Date", variable=self.include_end).pack(anchor="w")
+        
+        # Create checkbuttons with toggle commands
+        name_cb = tk.Checkbutton(toggle_frame, text="Name", variable=self.include_name, 
+                               command=lambda: self.toggle_placeholder("Name"))
+        name_cb.pack(anchor="w")
+        
+        id_cb = tk.Checkbutton(toggle_frame, text="ID", variable=self.include_id,
+                             command=lambda: self.toggle_placeholder("ID"))
+        id_cb.pack(anchor="w")
+        
+        start_cb = tk.Checkbutton(toggle_frame, text="Start Date", variable=self.include_start,
+                                command=lambda: self.toggle_placeholder("Start Date"))
+        start_cb.pack(anchor="w")
+        
+        end_cb = tk.Checkbutton(toggle_frame, text="End Date", variable=self.include_end,
+                              command=lambda: self.toggle_placeholder("End Date"))
+        end_cb.pack(anchor="w")
 
         # ---- Font Settings ----
         font_frame = tk.LabelFrame(left_panel, text="Font Settings", padx=10, pady=10)
@@ -106,40 +123,49 @@ class CertificateApp:
         self.progress = ttk.Progressbar(bottom_frame, orient="horizontal", length=300, mode="determinate")
         self.progress.pack(side="left", padx=10, expand=True)
 
-    def save_positions(self):
-        if not self.original_image:
-            messagebox.showwarning("Warning", "Load a template first!")
-            return
-
-        coords = self.get_placeholder_positions()
-        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
-        if file_path:
-            with open(file_path, "w") as f:
-                json.dump(coords, f, indent=4)
-            messagebox.showinfo("Saved", "Placeholder positions saved successfully!")
-
-    def load_positions(self):
-        if not self.original_image:
-            messagebox.showwarning("Warning", "Load a template first!")
-            return
-    
-        file_path = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
-        if not file_path:
-            return
-    
+    def set_icon(self):
+        """Set the application icon based on the operating system."""
         try:
-            with open(file_path, "r") as f:
-                coords = json.load(f)
-    
-            for label, (real_x, real_y) in coords.items():
-                if label in self.placeholders:
-                    # Convert back to scaled position
-                    scaled_x = real_x / self.scale_x
-                    scaled_y = real_y / self.scale_y
-                    self.canvas.coords(self.placeholders[label], scaled_x, scaled_y)
-            print("Placeholder positions loaded successfully!")
+            if getattr(sys, 'frozen', False):
+                # Running as a bundle (PyInstaller)
+                base_path = sys._MEIPASS
+            else:
+                # Running as a script
+                base_path = os.path.dirname(os.path.abspath(__file__))
+            
+            # Try different icon formats
+            icon_paths = [
+                os.path.join(base_path, 'icon.ico'),
+                os.path.join(base_path, 'logo.png'),
+                os.path.join(base_path, 'icon.png')
+            ]
+            
+            icon_set = False
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    try:
+                        if platform.system() == 'Windows':
+                            self.root.iconbitmap(icon_path)
+                            icon_set = True
+                            break
+                        elif platform.system() == 'Linux':
+                            img = Image.open(icon_path)
+                            photo = ImageTk.PhotoImage(img)
+                            self.root.tk.call('wm', 'iconphoto', self.root._w, photo)
+                            icon_set = True
+                            break
+                        elif platform.system() == 'Darwin':  # macOS
+                            self.root.iconbitmap(icon_path)
+                            icon_set = True
+                            break
+                    except Exception as e:
+                        print(f"Error setting icon from {icon_path}: {e}")
+                        continue
+            
+            if not icon_set:
+                print("No suitable icon file found or could not be loaded")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to load positions:\n{e}")
+            print(f"Error setting icon: {e}")
 
     def choose_color(self, field):
         color = colorchooser.askcolor(title=f"Choose color for {field}")
@@ -158,6 +184,7 @@ class CertificateApp:
         if not file_path:
             return
 
+        self.template_path = file_path  # Store the template path
         self.original_image = Image.open(file_path)
         original_width, original_height = self.original_image.size
 
@@ -184,29 +211,47 @@ class CertificateApp:
 
     def create_placeholder(self, label):
         def render_placeholder():
-            font_size = self.font_settings[label]["size"].get()
-            color = self.font_settings[label]["color"].get()
-            sample_value = {
-                "Name": "John Doe",
-                "ID": "12345",
-                "Start Date": "01-01-2024",
-                "End Date": "01-06-2024"
-            }.get(label, label)
-        
-            font_path = "arial.ttf"
             try:
-                scaled_font_size = max(10, int(font_size / self.scale_y))
-                font = ImageFont.truetype(font_path, scaled_font_size)
-            except IOError:
-                font = ImageFont.load_default()
-        
-            img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
-            draw = ImageDraw.Draw(img)
-            draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
-            bbox = img.getbbox()
-            cropped_img = img.crop(bbox)
-        
-            return ImageTk.PhotoImage(cropped_img)
+                # Get font size with proper validation
+                try:
+                    font_size = int(self.font_settings[label]["size"].get())
+                    if font_size < 1:
+                        font_size = 32  # Default size if invalid
+                except (ValueError, TypeError, ttk.TclError):
+                    font_size = 32  # Default size if conversion fails
+
+                # Get color with validation
+                try:
+                    color = self.font_settings[label]["color"].get()
+                    if not color:
+                        color = "#000000"  # Default color if empty
+                except (ValueError, TypeError, ttk.TclError):
+                    color = "#000000"  # Default color if conversion fails
+
+                sample_value = {
+                    "Name": "John Doe",
+                    "ID": "ID12345",
+                    "Start Date": "01-01-2024",
+                    "End Date": "01-06-2024"
+                }.get(label, label)
+            
+                font_path = "arial.ttf"
+                try:
+                    scaled_font_size = max(10, int(font_size / self.scale_y))
+                    font = ImageFont.truetype(font_path, scaled_font_size)
+                except IOError:
+                    font = ImageFont.load_default()
+            
+                img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
+                draw = ImageDraw.Draw(img)
+                draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
+                bbox = img.getbbox()
+                cropped_img = img.crop(bbox)
+            
+                return ImageTk.PhotoImage(cropped_img)
+            except Exception as e:
+                print(f"Error rendering placeholder: {e}")
+                return None
 
 
         # Initial render
@@ -221,7 +266,7 @@ class CertificateApp:
                 "x": self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx()),
                 "y": self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
             }
-        
+
         def do_drag(event):
             new_x = self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx())
             new_y = self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
@@ -246,6 +291,21 @@ class CertificateApp:
 
         self.placeholders[label] = item
 
+    def toggle_placeholder(self, label):
+        """Show or hide a placeholder based on its toggle state."""
+        if label in self.placeholders:
+            var = {
+                "Name": self.include_name,
+                "ID": self.include_id,
+                "Start Date": self.include_start,
+                "End Date": self.include_end
+            }[label]
+            
+            if var.get():
+                self.canvas.itemconfig(self.placeholders[label], state="normal")
+            else:
+                self.canvas.itemconfig(self.placeholders[label], state="hidden")
+
     def get_placeholder_positions(self):
         """Get scaled coordinates for actual certificate."""
         coords = {}
@@ -254,10 +314,12 @@ class CertificateApp:
             coords[label] = (x * self.scale_x, y * self.scale_y)
         return coords
     
-    def load_excel(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
+    def load_excel(self, file_path=None):
+        if not file_path:
+            file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if not file_path:
             return
+        self.excel_path = file_path
 
         wb = load_workbook(file_path)
         sheet = wb.active
@@ -422,6 +484,109 @@ class CertificateApp:
     
         # Start the certificate generation in a separate thread
         threading.Thread(target=generate_certificates_in_thread, daemon=True).start()
+
+    def save_project(self):
+        if not self.original_image:
+            messagebox.showwarning("Warning", "No template loaded!")
+            return
+    
+        try:
+            # Ensure template_path is set
+            if not hasattr(self, 'template_path') or not self.template_path:
+                messagebox.showwarning("Warning", "Template path not set!")
+                return
+
+            project_data = {
+                "template_path": self.template_path,
+                "positions": self.get_placeholder_positions(),
+                "font_settings": {
+                    field: {
+                        "size": self.font_settings[field]["size"].get(),
+                        "color": self.font_settings[field]["color"].get()
+                    } for field in self.font_settings
+                },
+                "attributes": {
+                    "Name": self.include_name.get(),
+                    "ID": self.include_id.get(),
+                    "Start Date": self.include_start.get(),
+                    "End Date": self.include_end.get()
+                },
+                "excel_path": self.excel_path if hasattr(self, 'excel_path') else None
+            }
+    
+            file_path = filedialog.asksaveasfilename(defaultextension=".certproj", filetypes=[("Certificate Project", "*.certproj")])
+            if file_path:
+                with open(file_path, "w") as f:
+                    json.dump(project_data, f, indent=4)
+                messagebox.showinfo("Saved", "Project saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save project: {e}")
+    
+    def load_project(self):
+        try:
+            file_path = filedialog.askopenfilename(filetypes=[("Certificate Project", "*.certproj")])
+            if not file_path:
+                return
+
+            with open(file_path, "r") as f:
+                project_data = json.load(f)
+
+            # Clear existing UI elements
+            self.canvas.delete("all")
+            self.placeholders.clear()
+
+            # Load template first
+            if project_data.get("template_path") and os.path.exists(project_data["template_path"]):
+                self.template_path = project_data["template_path"]
+                self.original_image = Image.open(self.template_path)
+                original_width, original_height = self.original_image.size
+
+                # Calculate scaling
+                max_width, max_height = 1000, 700
+                ratio = min(max_width / original_width, max_height / original_height)
+                new_size = (int(original_width * ratio), int(original_height * ratio))
+
+                self.scale_x = original_width / new_size[0]
+                self.scale_y = original_height / new_size[1]
+
+                # Resize and display template
+                resized_img = self.original_image.resize(new_size)
+                self.display_image = ImageTk.PhotoImage(resized_img)
+                self.canvas.config(width=new_size[0], height=new_size[1])
+                self.canvas.create_image(0, 0, image=self.display_image, anchor="nw")
+
+            # Load font settings
+            if "font_settings" in project_data:
+                for field in project_data["font_settings"]:
+                    if field in self.font_settings:
+                        self.font_settings[field]["size"].set(project_data["font_settings"][field]["size"])
+                        self.font_settings[field]["color"].set(project_data["font_settings"][field]["color"])
+
+            # Load attributes
+            if "attributes" in project_data:
+                self.include_name.set(project_data["attributes"].get("Name", True))
+                self.include_id.set(project_data["attributes"].get("ID", True))
+                self.include_start.set(project_data["attributes"].get("Start Date", True))
+                self.include_end.set(project_data["attributes"].get("End Date", True))
+
+            # Create placeholders with updated settings
+            for label in ["Name", "ID", "Start Date", "End Date"]:
+                self.create_placeholder(label)
+
+            # Load positions after placeholders are created
+            if "positions" in project_data:
+                for label, (x, y) in project_data["positions"].items():
+                    if label in self.placeholders:
+                        self.canvas.coords(self.placeholders[label], x / self.scale_x, y / self.scale_y)
+
+            # Load Excel data last
+            if project_data.get("excel_path") and os.path.exists(project_data["excel_path"]):
+                self.excel_path = project_data["excel_path"]
+                self.load_excel(self.excel_path)
+
+            messagebox.showinfo("Loaded", "Project loaded successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load project: {e}")
 
 
 

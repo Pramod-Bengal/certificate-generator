@@ -15,6 +15,7 @@ temp_certificate.png
 *.xlsx
 *.png
 *.json
+*certproj
 
 # macOS and Windows junk
 .DS_Store
