@@ -216,14 +216,21 @@ class CertificateApp:
         item = self.canvas.create_window(50, 50, window=img_label, anchor="nw")
 
         def start_drag(event, canvas_item=item):
-            self._drag_data = {"item": canvas_item, "x": event.x, "y": event.y}
-
+            self._drag_data = {
+                "item": canvas_item,
+                "x": self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx()),
+                "y": self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
+            }
+        
         def do_drag(event):
-            dx = event.x - self._drag_data["x"]
-            dy = event.y - self._drag_data["y"]
+            new_x = self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx())
+            new_y = self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
+            dx = new_x - self._drag_data["x"]
+            dy = new_y - self._drag_data["y"]
             self.canvas.move(self._drag_data["item"], dx, dy)
-            self._drag_data["x"] = event.x
-            self._drag_data["y"] = event.y
+            self._drag_data["x"] = new_x
+            self._drag_data["y"] = new_y
+
 
         img_label.bind("<Button-1>", start_drag)
         img_label.bind("<B1-Motion>", do_drag)
