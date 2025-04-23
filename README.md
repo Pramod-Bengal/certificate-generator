@@ -1,6 +1,12 @@
 # Certificate Generator
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue.svg)](https://github.com/shahil-sk/certificate-generator)
+
 A Python-based application for generating certificates from templates with customizable text placement, fonts, and colors.
+
+## Repository
+
+This project is hosted on GitHub: [https://github.com/shahil-sk/certificate-generator](https://github.com/shahil-sk/certificate-generator)
 
 ## Features
 
@@ -22,7 +28,12 @@ A Python-based application for generating certificates from templates with custo
 
 ## Installation
 
-1. Clone this repository or download the source code
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/shahil-sk/certificate-generator.git
+   cd certificate-generator
+   ```
+
 2. Install the required dependencies:
    ```bash
    pip install -r requirements.txt
