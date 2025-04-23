@@ -1,12 +1,12 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
-from PIL import Image, ImageTk
+from tkinter import filedialog, messagebox, ttk
+from PIL import Image, ImageTk, ImageFont, ImageDraw
 from openpyxl import load_workbook
 from fpdf import FPDF
-from PIL import ImageFont, ImageDraw
-from tkinter import filedialog, messagebox
 import re
+from tkinter import colorchooser
+import json
 
 
 
@@ -23,18 +23,10 @@ class CertificateApp:
         self.scale_x = 1
         self.scale_y = 1
 
-        self.canvas = tk.Canvas(root, width=1000, height=700, bg="gray")
-        self.canvas.pack()
-
-        self.load_btn = tk.Button(root, text="Load Template", command=self.load_template)
-        self.load_btn.pack(pady=10)
 
         self.placeholders = {}  # Store placeholder references
 
         self.excel_data = []  # Will store list of student dictionaries
-
-        self.excel_btn = tk.Button(root, text="Load Excel", command=self.load_excel)
-        self.excel_btn.pack(pady=5)
 
         self.include_name = tk.BooleanVar(value=True)
         self.include_id = tk.BooleanVar(value=True)
@@ -42,23 +34,116 @@ class CertificateApp:
         self.include_end = tk.BooleanVar(value=True)
 
 
-        # Section label
-        tk.Label(self.master, text="Include Fields in Certificate:", font=("Arial", 12, "bold")).pack(pady=(10, 0))
-
-        # Create a frame to group the checkbuttons
-        checkbox_frame = tk.Frame(self.master)
-        checkbox_frame.pack(pady=(0, 10))
-
-        # Individual Checkbuttons
-        tk.Checkbutton(checkbox_frame, text="Name", variable=self.include_name).grid(row=0, column=0, sticky="w", padx=5)
-        tk.Checkbutton(checkbox_frame, text="ID", variable=self.include_id).grid(row=0, column=1, sticky="w", padx=5)
-        tk.Checkbutton(checkbox_frame, text="Start Date", variable=self.include_start).grid(row=1, column=0, sticky="w", padx=5)
-        tk.Checkbutton(checkbox_frame, text="End Date", variable=self.include_end).grid(row=1, column=1, sticky="w", padx=5)
+        self.font_settings = {
+            "Name": {"size": tk.IntVar(value=48), "color": tk.StringVar(value="#000000")},
+            "ID": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")},
+            "Start Date": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")},
+            "End Date": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")}
+        }
+        self.setup_ui()
         
-        self.generate_btn = tk.Button(root, text="Generate Certificates", command=self.generate_certificates)
-        self.generate_btn.pack(pady=5)
+    def setup_ui(self):
+        self.master.title("Certificate Generator")
+        self.master.geometry("1000x700")
+        self.master.configure(padx=20, pady=20)
+
+        # ---- Header ----
+        header = tk.Label(self.master, text="📄 Certificate Generator", font=("Helvetica", 20, "bold"))
+        header.pack(pady=(0, 10))
+
+        # ---- Top Buttons ----
+        top_frame = tk.Frame(self.master)
+        top_frame.pack(fill="x", pady=(0, 10))
+
+        tk.Button(top_frame, text="Load Template", command=self.load_template).pack(side="left", padx=5)
+        tk.Button(top_frame, text="Load Excel", command=self.load_excel).pack(side="left", padx=5)
+
+        #---- Save Position Buttons ----
+        tk.Button(top_frame, text="Save Positions", command=self.save_positions).pack(side="left", padx=5)
+        tk.Button(top_frame, text="Load Positions", command=self.load_positions).pack(side="left", padx=5)
 
 
+        # ---- Canvas ----
+        self.canvas_frame = tk.Frame(self.master, relief="sunken", borderwidth=2)
+        self.canvas_frame.pack(pady=(0, 15), fill="both", expand=True)
+
+        self.canvas = tk.Canvas(self.canvas_frame, width=900, height=500, bg="white")
+        self.canvas.pack()
+
+        # ---- Placeholder Toggles ----
+        toggle_frame = tk.LabelFrame(self.master, text="Toggle Attributes", padx=10, pady=10)
+        toggle_frame.pack(side="left", anchor="n", padx=(0, 20))
+
+        tk.Checkbutton(toggle_frame, text="Name", variable=self.include_name).pack(anchor="w")
+        tk.Checkbutton(toggle_frame, text="ID", variable=self.include_id).pack(anchor="w")
+        tk.Checkbutton(toggle_frame, text="Start Date", variable=self.include_start).pack(anchor="w")
+        tk.Checkbutton(toggle_frame, text="End Date", variable=self.include_end).pack(anchor="w")
+
+        # ---- Font Settings ----
+        font_frame = tk.LabelFrame(self.master, text="Font Settings", padx=10, pady=10)
+        font_frame.pack(side="left", anchor="n")
+
+        for i, field in enumerate(self.font_settings):
+            tk.Label(font_frame, text=field).grid(row=i, column=0, sticky="w", padx=5, pady=2)
+            tk.Label(font_frame, text="Size:").grid(row=i, column=1, sticky="e")
+            tk.Spinbox(font_frame, from_=10, to=100, textvariable=self.font_settings[field]["size"], width=5).grid(row=i, column=2, padx=5)
+            tk.Button(font_frame, text="Color", command=lambda f=field: self.choose_color(f)).grid(row=i, column=3, padx=5)
+
+        # ---- Generate Button ----
+        generate_btn = tk.Button(self.master, text="Generate Certificates", font=("Arial", 14), bg="#4CAF50", fg="white", command=self.generate_certificates)
+        generate_btn.pack(pady=20)
+
+        #---- Progress bar ----
+        self.progress = ttk.Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
+        self.progress.pack(pady=10)
+
+
+    def save_positions(self):
+        if not self.original_image:
+            messagebox.showwarning("Warning", "Load a template first!")
+            return
+
+        coords = self.get_placeholder_positions()
+        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON Files", "*.json")])
+        if file_path:
+            with open(file_path, "w") as f:
+                json.dump(coords, f, indent=4)
+            messagebox.showinfo("Saved", "Placeholder positions saved successfully!")
+    def load_positions(self):
+        if not self.original_image:
+            messagebox.showwarning("Warning", "Load a template first!")
+            return
+    
+        file_path = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+        if not file_path:
+            return
+    
+        try:
+            with open(file_path, "r") as f:
+                coords = json.load(f)
+    
+            for label, (real_x, real_y) in coords.items():
+                if label in self.placeholders:
+                    # Convert back to scaled position
+                    scaled_x = real_x / self.scale_x
+                    scaled_y = real_y / self.scale_y
+                    self.canvas.coords(self.placeholders[label], scaled_x, scaled_y)
+    
+            messagebox.showinfo("Loaded", "Placeholder positions loaded successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load positions:\n{e}")
+
+
+
+
+    def choose_color(self, field):
+        color = colorchooser.askcolor(title=f"Choose color for {field}")
+        if color[1]:
+            self.font_settings[field]["color"].set(color[1])
+
+    def hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def load_template(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png")])
@@ -89,8 +174,37 @@ class CertificateApp:
         self.create_placeholder("End Date")
 
     def create_placeholder(self, label):
-        widget = tk.Label(self.canvas, text=label, bg="yellow", fg="black")
-        item = self.canvas.create_window(50, 50, window=widget, anchor="nw")
+        def render_placeholder():
+            font_size = self.font_settings[label]["size"].get()
+            color = self.font_settings[label]["color"].get()
+            sample_value = {
+                "Name": "John Doe",
+                "ID": "12345",
+                "Start Date": "01-01-2024",
+                "End Date": "01-06-2024"
+            }.get(label, label)
+        
+            font_path = "arial.ttf"
+            try:
+                scaled_font_size = max(10, int(font_size / self.scale_y))
+                font = ImageFont.truetype(font_path, scaled_font_size)
+            except IOError:
+                font = ImageFont.load_default()
+        
+            img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
+            draw = ImageDraw.Draw(img)
+            draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
+            bbox = img.getbbox()
+            cropped_img = img.crop(bbox)
+        
+            return ImageTk.PhotoImage(cropped_img)
+
+
+        # Initial render
+        preview_img = render_placeholder()
+        img_label = tk.Label(self.canvas, image=preview_img, bg="white")
+        img_label.image = preview_img  # keep a reference
+        item = self.canvas.create_window(50, 50, window=img_label, anchor="nw")
 
         def start_drag(event, canvas_item=item):
             self._drag_data = {"item": canvas_item, "x": event.x, "y": event.y}
@@ -102,10 +216,21 @@ class CertificateApp:
             self._drag_data["x"] = event.x
             self._drag_data["y"] = event.y
 
-        widget.bind("<Button-1>", start_drag)
-        widget.bind("<B1-Motion>", do_drag)
+        img_label.bind("<Button-1>", start_drag)
+        img_label.bind("<B1-Motion>", do_drag)
 
-        self.placeholders[label] = item  # Save it
+        # Update preview on font size change
+        def update_preview(*args):
+            new_img = render_placeholder()
+            img_label.configure(image=new_img)
+            img_label.image = new_img
+
+        self.font_settings[label]["size"].trace("w", update_preview)
+        self.font_settings[label]["color"].trace("w", update_preview)
+
+        self.placeholders[label] = item
+
+
 
     def get_placeholder_positions(self):
         """Get scaled coordinates for actual certificate."""
@@ -134,103 +259,70 @@ class CertificateApp:
             })
 
         print(f"Loaded {len(self.excel_data)} students from Excel.")
-        print("Include Name:", self.include_name.get())
-        print("Include ID:", self.include_id.get())
-        print("Include Start:", self.include_start.get())
-        print("Include End:", self.include_end.get())
 
     def generate_certificates(self):
         if not self.excel_data:
             messagebox.showwarning("Warning", "No student data loaded!")
             return
-
+    
         if not self.original_image:
             messagebox.showwarning("Warning", "No template image loaded!")
             return
-
-        # Let user choose folder to save generated certificates
+    
         output_dir = filedialog.askdirectory(title="Select Output Folder")
         if not output_dir:
-            return  # User cancelled
-
+            return
+    
         font_path = "arial.ttf"
-        generated_count = 0  # Make sure to have this font file in your directory
-
+        generated_count = 0
+    
+        # Convert px to mm (1 px = 0.264583 mm)
+        def px_to_mm(px): return px * 0.264583
+    
+        img_width_px, img_height_px = self.original_image.size
+        pdf_width = px_to_mm(img_width_px)
+        pdf_height = px_to_mm(img_height_px)
+    
         for student in self.excel_data:
-            # Create a PDF object
-            pdf = FPDF()
+            pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
             pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-
-            # Use the already loaded original image for the template
+    
             original_img = self.original_image.copy()
-
-            # Create ImageDraw object
             draw = ImageDraw.Draw(original_img)
-
-            # Get scaled placeholder positions
+    
             placeholder_positions = self.get_placeholder_positions()
-            # Name
-            if self.include_name.get():
-                name_x, name_y = placeholder_positions["Name"]
-                font = ImageFont.truetype(font_path, 48)
-                draw.text((name_x, name_y), student["Name"], font=font, fill="black")
-
-            # ID
-            if self.include_id.get():
-                id_x, id_y = placeholder_positions["ID"]
-                font = ImageFont.truetype(font_path, 32)
-                draw.text((id_x, id_y), student["ID"], font=font, fill="black")
-
-            # Start Date
-            if self.include_start.get():
-                start_x, start_y = placeholder_positions["Start Date"]
-                font = ImageFont.truetype(font_path, 32)
-                draw.text((start_x, start_y), student["Start Date"], font=font, fill="black")
-
-            # End Date
-            if self.include_end.get():
-                end_x, end_y = placeholder_positions["End Date"]
-                font = ImageFont.truetype(font_path, 32)
-                draw.text((end_x, end_y), student["End Date"], font=font, fill="black")
-
-            # Example: Add Name (larger font size)
-            name_x, name_y = placeholder_positions["Name"]
-            font_size = 48  # Larger size for Name
-            try:
-                font = ImageFont.truetype(font_path, font_size)
-            except IOError:
-                font = ImageFont.load_default()  # Fallback to default if font file is missing
-            draw.text((name_x, name_y), student["Name"], font=font, fill="black")
-
-            # Save the image temporarily as a PNG file
+    
+            # Add text fields
+            for field, include_var in [
+                ("Name", self.include_name),
+                ("ID", self.include_id),
+                ("Start Date", self.include_start),
+                ("End Date", self.include_end)
+            ]:
+                if include_var.get():
+                    x, y = placeholder_positions[field]
+                    size = self.font_settings[field]["size"].get()
+                    color = self.font_settings[field]["color"].get()
+                    try:
+                        font = ImageFont.truetype(font_path, size)
+                    except IOError:
+                        font = ImageFont.load_default()
+                    draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+    
             temp_img_path = "temp_certificate.png"
             original_img.save(temp_img_path)
-
-            # Convert to PDF
-            pdf_image = Image.open(temp_img_path)
-            pdf.image(temp_img_path, x=10, y=10, w=pdf_image.width / 10, h=pdf_image.height / 10)  # Adjust image size to fit PDF
-            
-            # # Save final PDF for this student in the generated folder
-            # pdf_output_path = os.path.join(output_dir, f"{student['Name']}_certificate.pdf")
-            # pdf.output(pdf_output_path)
-
-            # # Save final PDF for this student
-            # pdf_output_path = f"{student['Name']}_certificate.pdf"
-            # pdf.output(pdf_output_path)
-
-            # Clean file name (no special characters)
+    
+            pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
+    
             safe_name = re.sub(r'[^\w\-_. ]', '', student['Name']).strip()
             pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
             pdf.output(pdf_output_path)
             generated_count += 1
-
-            # Clean up temp PNG
+    
             if os.path.exists(temp_img_path):
                 os.remove(temp_img_path)
-        
+    
         messagebox.showinfo("Done", f"{generated_count} certificate(s) generated successfully!")
-
 
 
 if __name__ == "__main__":
