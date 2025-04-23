@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.exe
+*.spec
+/build
+/dist
 
 # Certificate outputs
 *.pdf
@@ -19,3 +23,6 @@ Thumbs.db
 # Python virtual environment
 venv/
 .env/
+
+# Other
+*.zip
