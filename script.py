@@ -7,6 +7,7 @@ from fpdf import FPDF
 import re
 from tkinter import colorchooser
 import json
+import threading
 
 
 
@@ -61,6 +62,9 @@ class CertificateApp:
         #---- Save Position Buttons ----
         tk.Button(top_frame, text="Save Positions", command=self.save_positions).pack(side="left", padx=5)
         tk.Button(top_frame, text="Load Positions", command=self.load_positions).pack(side="left", padx=5)
+        
+        # ---- Preview Section ----
+        tk.Button(top_frame, text="Preview Certificate", command=self.preview_certificate).pack(side="left", padx=5)
 
 
         # ---- Canvas ----
@@ -97,7 +101,6 @@ class CertificateApp:
         self.progress = ttk.Progressbar(self.master, orient="horizontal", length=300, mode="determinate")
         self.progress.pack(pady=10)
 
-
     def save_positions(self):
         if not self.original_image:
             messagebox.showwarning("Warning", "Load a template first!")
@@ -109,6 +112,7 @@ class CertificateApp:
             with open(file_path, "w") as f:
                 json.dump(coords, f, indent=4)
             messagebox.showinfo("Saved", "Placeholder positions saved successfully!")
+
     def load_positions(self):
         if not self.original_image:
             messagebox.showwarning("Warning", "Load a template first!")
@@ -128,13 +132,9 @@ class CertificateApp:
                     scaled_x = real_x / self.scale_x
                     scaled_y = real_y / self.scale_y
                     self.canvas.coords(self.placeholders[label], scaled_x, scaled_y)
-    
-            messagebox.showinfo("Loaded", "Placeholder positions loaded successfully!")
+            print("Placeholder positions loaded successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load positions:\n{e}")
-
-
-
 
     def choose_color(self, field):
         color = colorchooser.askcolor(title=f"Choose color for {field}")
@@ -142,6 +142,9 @@ class CertificateApp:
             self.font_settings[field]["color"].set(color[1])
 
     def hex_to_rgb(self, hex_color):
+        # Get the string value from StringVar if it's a StringVar
+        if isinstance(hex_color, tk.StringVar):
+            hex_color = hex_color.get()
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
@@ -172,6 +175,7 @@ class CertificateApp:
         self.create_placeholder("ID")
         self.create_placeholder("Start Date")
         self.create_placeholder("End Date")
+        
 
     def create_placeholder(self, label):
         def render_placeholder():
@@ -230,8 +234,6 @@ class CertificateApp:
 
         self.placeholders[label] = item
 
-
-
     def get_placeholder_positions(self):
         """Get scaled coordinates for actual certificate."""
         coords = {}
@@ -259,6 +261,65 @@ class CertificateApp:
             })
 
         print(f"Loaded {len(self.excel_data)} students from Excel.")
+    
+    def preview_certificate(self):
+        if not self.original_image:
+            messagebox.showwarning("Warning", "Template not loaded!")
+            return
+
+        if not self.excel_data:
+            messagebox.showwarning("Warning", "No student data loaded!")
+            return
+
+        # Automatically select the first student
+        student = self.excel_data[0]  # Always preview the first student
+
+        # Create a copy of the image to work on
+        img = self.original_image.copy()
+        draw = ImageDraw.Draw(img)
+        placeholder_positions = self.get_placeholder_positions()
+        font_path = "arial.ttf"  # Make sure this font file is available
+
+        for field, include_var in [
+            ("Name", self.include_name),
+            ("ID", self.include_id),
+            ("Start Date", self.include_start),
+            ("End Date", self.include_end)
+        ]:
+            if include_var.get():
+                x, y = placeholder_positions[field]
+                size = self.font_settings[field]["size"].get()
+                color = self.font_settings[field]["color"].get()
+                try:
+                    font = ImageFont.truetype(font_path, size)
+                except IOError:
+                    font = ImageFont.load_default()
+                
+                # Calculate the width of the text to adjust the position
+                text_width = draw.textlength(student[field], font=font)
+
+                # If it's the Name field, adjust the x to center the text
+                if field == "Name":
+                    x = (img.width - text_width) // 2  # Center the text horizontally
+
+                # Apply the text to the image
+                draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+
+        # Show preview in a new window
+        preview_win = tk.Toplevel(self.root)
+        preview_win.title("Certificate Preview")
+
+        # Resize image for display
+        preview_img = img.resize((900, int(img.height * (900 / img.width))), Image.LANCZOS)
+        preview_photo = ImageTk.PhotoImage(preview_img)
+
+        # Label to display the image in the preview window
+        label = tk.Label(preview_win, image=preview_photo)
+        label.image = preview_photo  # Keep a reference to the image
+        label.pack()
+
+        preview_win.mainloop()  # Start the Tkinter event loop for the preview window
+
 
     def generate_certificates(self):
         if not self.excel_data:
@@ -283,46 +344,73 @@ class CertificateApp:
         pdf_width = px_to_mm(img_width_px)
         pdf_height = px_to_mm(img_height_px)
     
-        for student in self.excel_data:
-            pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
-            pdf.add_page()
+        # Update the progress bar
+        def update_progressbar(current, total):
+            progress = (current / total) * 100
+            self.progress['value'] = progress
+            self.master.update_idletasks()
     
-            original_img = self.original_image.copy()
-            draw = ImageDraw.Draw(original_img)
+        # Certificate generation function
+        def generate_certificates_in_thread():
+            nonlocal generated_count
+            total_students = len(self.excel_data)
     
-            placeholder_positions = self.get_placeholder_positions()
+            for i, student in enumerate(self.excel_data):
+                pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
+                pdf.add_page()
     
-            # Add text fields
-            for field, include_var in [
-                ("Name", self.include_name),
-                ("ID", self.include_id),
-                ("Start Date", self.include_start),
-                ("End Date", self.include_end)
-            ]:
-                if include_var.get():
-                    x, y = placeholder_positions[field]
-                    size = self.font_settings[field]["size"].get()
-                    color = self.font_settings[field]["color"].get()
-                    try:
-                        font = ImageFont.truetype(font_path, size)
-                    except IOError:
-                        font = ImageFont.load_default()
-                    draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                original_img = self.original_image.copy()
+                draw = ImageDraw.Draw(original_img)
     
-            temp_img_path = "temp_certificate.png"
-            original_img.save(temp_img_path)
+                placeholder_positions = self.get_placeholder_positions()
     
-            pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
+                # Add text fields
+                for field, include_var in [
+                    ("Name", self.include_name),
+                    ("ID", self.include_id),
+                    ("Start Date", self.include_start),
+                    ("End Date", self.include_end)
+                ]:
+                    if include_var.get():
+                        x, y = placeholder_positions[field]
+                        size = self.font_settings[field]["size"].get()
+                        color = self.font_settings[field]["color"].get()
+                        try:
+                            font = ImageFont.truetype(font_path, size)
+                        except IOError:
+                            font = ImageFont.load_default()
+                        
+                        # Calculate the width of the text to adjust the position
+                        text_width = draw.textlength(student[field], font=font)
     
-            safe_name = re.sub(r'[^\w\-_. ]', '', student['Name']).strip()
-            pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
-            pdf.output(pdf_output_path)
-            generated_count += 1
+                        # If it's the Name field, adjust the x to center the text
+                        if field == "Name":
+                            x = (original_img.width - text_width) // 2  # Center the text horizontally
     
-            if os.path.exists(temp_img_path):
-                os.remove(temp_img_path)
+                        # Apply the text to the image
+                        draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
     
-        messagebox.showinfo("Done", f"{generated_count} certificate(s) generated successfully!")
+                temp_img_path = "temp_certificate.png"
+                original_img.save(temp_img_path)
+    
+                pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
+    
+                safe_name = re.sub(r'[^\w\-_. ]', '', student['Name']).strip()
+                pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
+                pdf.output(pdf_output_path)
+                generated_count += 1
+    
+                if os.path.exists(temp_img_path):
+                    os.remove(temp_img_path)
+    
+                # Update progress after each certificate is generated
+                update_progressbar(i + 1, total_students)
+    
+            messagebox.showinfo("Done", f"{generated_count} certificate(s) generated successfully!")
+    
+        # Start the certificate generation in a separate thread
+        threading.Thread(target=generate_certificates_in_thread, daemon=True).start()
+
 
 
 if __name__ == "__main__":
