@@ -32,19 +32,16 @@ class CertificateApp:
         self.placeholders = {}  # Store placeholder references
 
         self.excel_data = []  # Will store list of student dictionaries
+        self.fields = []  # List to store dynamic fields
+        self.field_vars = {}  # Dictionary to store field toggle variables
+        self.font_settings = {}  # Dictionary to store font settings for each field
+        self.selected_field = tk.StringVar()  # For dropdown
 
         self.include_name = tk.BooleanVar(value=True)
         self.include_id = tk.BooleanVar(value=True)
         self.include_start = tk.BooleanVar(value=True)
         self.include_end = tk.BooleanVar(value=True)
 
-
-        self.font_settings = {
-            "Name": {"size": tk.IntVar(value=48), "color": tk.StringVar(value="#000000")},
-            "ID": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")},
-            "Start Date": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")},
-            "End Date": {"size": tk.IntVar(value=32), "color": tk.StringVar(value="#000000")}
-        }
         self.setup_ui()
         
     def setup_ui(self):
@@ -76,71 +73,33 @@ class CertificateApp:
         settings_frame.pack(side="left", fill="y", padx=(0, 20))
 
         # ---- Load Data ----
-
         data_frame = tk.Frame(settings_frame, width=250)
         data_frame.pack(fill="x", padx=(0.10))
 
-        # load template button
-        load_template_btn = tk.Button(data_frame, text="Load Template", command=self.load_template, fg="black", bg="grey", relief="flat", padx=10)
+        load_template_btn = tk.Button(data_frame, text="Load Template", command=self.load_template, 
+                                    fg="black", bg="grey", relief="flat", padx=10)
         load_template_btn.pack(side="left", padx=5)
 
-        # load execl Button
-        load_execl_btn = tk.Button(data_frame, text="Load Excel", command=self.load_excel, fg="black", bg="grey", relief="flat", padx=10)
-        load_execl_btn.pack(side="left", padx=5)
+        load_excel_btn = tk.Button(data_frame, text="Load Excel", command=self.load_excel, 
+                                 fg="black", bg="grey", relief="flat", padx=10)
+        load_excel_btn.pack(side="left", padx=5)
 
-        # ---- Placeholder Toggles ----
-        toggle_frame = tk.LabelFrame(settings_frame, text="Attributes", padx=10, pady=10)
-        toggle_frame.pack(fill="x", pady=(0, 10))
-        
-
-        # Create checkbuttons with toggle commands
-        name_cb = tk.Checkbutton(toggle_frame, text="Name", variable=self.include_name, 
-                               command=lambda: self.toggle_placeholder("Name"))
-        name_cb.pack(anchor="w", pady=2)
-        
-        id_cb = tk.Checkbutton(toggle_frame, text="ID", variable=self.include_id,
-                             command=lambda: self.toggle_placeholder("ID"))
-        id_cb.pack(anchor="w", pady=2)
-        
-        start_cb = tk.Checkbutton(toggle_frame, text="Start Date", variable=self.include_start,
-                                command=lambda: self.toggle_placeholder("Start Date"))
-        start_cb.pack(anchor="w", pady=2)
-        
-        end_cb = tk.Checkbutton(toggle_frame, text="End Date", variable=self.include_end,
-                              command=lambda: self.toggle_placeholder("End Date"))
-        end_cb.pack(anchor="w", pady=2)
+        # ---- Field Toggles ----
+        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=10, pady=10)
+        self.toggle_frame.pack(fill="x", pady=(0, 10))
 
         # ---- Font Settings ----
-        font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=10, pady=10)
-        font_frame.pack(fill="x", pady=(10, 10))
-
-        for i, field in enumerate(self.font_settings):
-            field_frame = tk.Frame(font_frame)
-            field_frame.pack(fill="x", pady=2)
-            
-            tk.Label(field_frame, text=field, width=10).pack(side="left")
-            
-            size_frame = tk.Frame(field_frame)
-            size_frame.pack(side="left", padx=5)
-            tk.Label(size_frame, text="Size:").pack(side="left")
-            tk.Spinbox(size_frame, from_=10, to=100, textvariable=self.font_settings[field]["size"], 
-                      width=5).pack(side="left", padx=2)
-            
-            color_btn = tk.Button(field_frame, text="Color", command=lambda f=field: self.choose_color(f),
-                                relief="flat", bg="#f0f0f0")
-            color_btn.pack(side="right")
+        self.font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=10, pady=10)
+        self.font_frame.pack(fill="x", pady=(0, 10))
 
         # ---- Action buttons ----
-
         action_frame = tk.LabelFrame(settings_frame, padx=10, pady=10)
         action_frame.pack(fill="x", pady=(10, 10))
 
-         # Preview Button
         preview_btn = tk.Button(action_frame, text="Preview", command=self.preview_certificate, 
                               bg="#4CAF50", fg="white", relief="flat", padx=10)
         preview_btn.pack(side="left", padx=5)
 
-        # Generate Button
         generate_btn = tk.Button(action_frame, text="Generate", command=self.generate_certificates,
                                bg="#2196F3", fg="white", relief="flat", padx=10)
         generate_btn.pack(side="left", padx=5)
@@ -210,6 +169,7 @@ class CertificateApp:
         color = colorchooser.askcolor(title=f"Choose color for {field}")
         if color[1]:
             self.font_settings[field]["color"].set(color[1])
+            self.update_preview(field)
 
     def hex_to_rgb(self, hex_color):
         # Get the string value from StringVar if it's a StringVar
@@ -223,7 +183,7 @@ class CertificateApp:
         if not file_path:
             return
 
-        self.template_path = file_path  # Store the template path
+        self.template_path = file_path
         self.original_image = Image.open(file_path)
         original_width, original_height = self.original_image.size
 
@@ -241,116 +201,91 @@ class CertificateApp:
         self.canvas.delete("all")
         self.canvas.create_image(0, 0, image=self.display_image, anchor="nw")
 
-        # Create draggable placeholders
-        self.create_placeholder("Name")
-        self.create_placeholder("ID")
-        self.create_placeholder("Start Date")
-        self.create_placeholder("End Date")
-        
+        # Create placeholders for all fields
+        for field in self.fields:
+            self.create_placeholder(field)
 
-    def create_placeholder(self, label):
-        def render_placeholder():
-            try:
-                # Get font size with proper validation
-                try:
-                    font_size = int(self.font_settings[label]["size"].get())
-                    if font_size < 1:
-                        font_size = 32  # Default size if invalid
-                except (ValueError, TypeError, ttk.TclError):
-                    font_size = 32  # Default size if conversion fails
+    def create_placeholder(self, field, x=None, y=None, is_update=False):
+        if field not in self.fields:
+            return
 
-                # Get color with validation
-                try:
-                    color = self.font_settings[label]["color"].get()
-                    if not color:
-                        color = "#000000"  # Default color if empty
-                except (ValueError, TypeError, ttk.TclError):
-                    color = "#000000"  # Default color if conversion fails
-
-                sample_value = {
-                    "Name": "John Doe",
-                    "ID": "ID12345",
-                    "Start Date": "01-01-2024",
-                    "End Date": "01-06-2024"
-                }.get(label, label)
-            
-                font_path = "arial.ttf"
-                try:
-                    scaled_font_size = max(10, int(font_size / self.scale_y))
-                    font = ImageFont.truetype(font_path, scaled_font_size)
-                except IOError:
-                    font = ImageFont.load_default()
-            
-                img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
-                draw = ImageDraw.Draw(img)
-                draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
-                bbox = img.getbbox()
-                cropped_img = img.crop(bbox)
-            
-                return ImageTk.PhotoImage(cropped_img)
-            except Exception as e:
-                print(f"Error rendering placeholder: {e}")
-                return None
-
-
-        # Initial render
-        preview_img = render_placeholder()
-        img_label = tk.Label(self.canvas, image=preview_img, bg="white")
-        img_label.image = preview_img  # keep a reference
-        item = self.canvas.create_window(50, 50, window=img_label, anchor="nw")
-
-        def start_drag(event, canvas_item=item):
-            self._drag_data = {
-                "item": canvas_item,
-                "x": self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx()),
-                "y": self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
-            }
-
-        def do_drag(event):
-            new_x = self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx())
-            new_y = self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
-            dx = new_x - self._drag_data["x"]
-            dy = new_y - self._drag_data["y"]
-            self.canvas.move(self._drag_data["item"], dx, dy)
-            self._drag_data["x"] = new_x
-            self._drag_data["y"] = new_y
-
-
-        img_label.bind("<Button-1>", start_drag)
-        img_label.bind("<B1-Motion>", do_drag)
-
-        # Update preview on font size change
-        def update_preview(*args):
-            new_img = render_placeholder()
-            img_label.configure(image=new_img)
-            img_label.image = new_img
-
-        self.font_settings[label]["size"].trace("w", update_preview)
-        self.font_settings[label]["color"].trace("w", update_preview)
-
-        self.placeholders[label] = item
-
-    def toggle_placeholder(self, label):
-        """Show or hide a placeholder based on its toggle state."""
-        if label in self.placeholders:
-            var = {
-                "Name": self.include_name,
-                "ID": self.include_id,
-                "Start Date": self.include_start,
-                "End Date": self.include_end
-            }[label]
-            
-            if var.get():
-                self.canvas.itemconfig(self.placeholders[label], state="normal")
+        # Remove existing placeholder if any
+        if field in self.placeholders:
+            old_x, old_y = self.canvas.coords(self.placeholders[field])
+            self.canvas.delete(self.placeholders[field])
+            x = x if x is not None else old_x
+            y = y if y is not None else old_y
+        else:
+            # For the first field, center it horizontally
+            if field == self.fields[0] and not is_update:
+                x = self.canvas.winfo_width() // 2
+                y = 50
             else:
-                self.canvas.itemconfig(self.placeholders[label], state="hidden")
+                x = 50
+                y = 50
+
+        # Create new placeholder
+        preview_img = self.render_placeholder(field)
+        if preview_img:
+            img_label = tk.Label(self.canvas, image=preview_img, bg="white")
+            img_label.image = preview_img
+
+            # For the first field, center it horizontally only on initial creation
+            if field == self.fields[0] and not is_update:
+                # Get the width of the placeholder
+                placeholder_width = preview_img.width()
+                # Calculate centered position
+                x = (self.canvas.winfo_width() - placeholder_width) // 2
+
+            item = self.canvas.create_window(x, y, window=img_label, anchor="nw")
+
+            def start_drag(event):
+                self._drag_data = {
+                    "item": item,
+                    "x": self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx()),
+                    "y": self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
+                }
+
+            def do_drag(event):
+                new_x = self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx())
+                new_y = self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
+                dx = new_x - self._drag_data["x"]
+                dy = new_y - self._drag_data["y"]
+                self.canvas.move(self._drag_data["item"], dx, dy)
+                self._drag_data["x"] = new_x
+                self._drag_data["y"] = new_y
+
+            img_label.bind("<Button-1>", start_drag)
+            img_label.bind("<B1-Motion>", do_drag)
+
+            self.placeholders[field] = item
+
+    def toggle_placeholder(self, field):
+        if field in self.placeholders:
+            if self.field_vars[field].get():
+                self.canvas.itemconfig(self.placeholders[field], state="normal")
+            else:
+                self.canvas.itemconfig(self.placeholders[field], state="hidden")
+
+    def update_preview(self, field):
+        if field in self.placeholders:
+            # Get current coordinates before recreating placeholder
+            x, y = self.canvas.coords(self.placeholders[field])
+            # Create placeholder with is_update=True to prevent centering
+            self.create_placeholder(field, x, y, is_update=True)
 
     def get_placeholder_positions(self):
         """Get scaled coordinates for actual certificate."""
         coords = {}
-        for label, item in self.placeholders.items():
-            x, y = self.canvas.coords(item)
-            coords[label] = (x * self.scale_x, y * self.scale_y)
+        for field, item in self.placeholders.items():
+            try:
+                x, y = self.canvas.coords(item)
+                # Scale the coordinates back to original image size
+                scaled_x = x * self.scale_x
+                scaled_y = y * self.scale_y
+                coords[field] = (scaled_x, scaled_y)
+            except Exception as e:
+                print(f"Error getting coordinates for {field}: {e}")
         return coords
     
     def load_excel(self, file_path=None):
@@ -363,18 +298,72 @@ class CertificateApp:
         wb = load_workbook(file_path)
         sheet = wb.active
 
-        self.excel_data = []
-        for row in sheet.iter_rows(min_row=2, values_only=True):  # Skip header
-            name, student_id, start_date, end_date = row
-            self.excel_data.append({
-                "Name": str(name),
-                "ID": str(student_id),
-                "Start Date": str(start_date),
-                "End Date": str(end_date)
-            })
+        # Get field names from header row and normalize them
+        self.fields = [str(cell.value).strip().lower() for cell in sheet[1]]
+        
+        # Initialize field variables and font settings
+        self.field_vars = {}
+        self.font_settings = {}
+        for field in self.fields:
+            self.field_vars[field] = tk.BooleanVar(value=True)
+            self.font_settings[field] = {
+                "size": tk.IntVar(value=32),
+                "color": tk.StringVar(value="#000000")
+            }
 
-        print(f"Loaded {len(self.excel_data)} students from Excel.")
-    
+        # Load data
+        self.excel_data = []
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            student_data = {}
+            for i, value in enumerate(row):
+                if i < len(self.fields):
+                    student_data[self.fields[i]] = str(value)
+            self.excel_data.append(student_data)
+
+        print(f"Loaded {len(self.excel_data)} students with fields: {', '.join(self.fields)}")
+        
+        # Update UI with new fields
+        self.update_ui_fields()
+
+    def update_ui_fields(self):
+        """Update UI elements to reflect current fields."""
+        # Clear existing placeholders
+        for placeholder in self.placeholders.values():
+            self.canvas.delete(placeholder)
+        self.placeholders.clear()
+
+        # Update toggle frame
+        for widget in self.toggle_frame.winfo_children():
+            widget.destroy()
+
+        for field in self.fields:
+            # Create field frame
+            field_frame = tk.Frame(self.toggle_frame)
+            field_frame.pack(fill="x", pady=2)
+
+            # Toggle checkbox
+            cb = tk.Checkbutton(field_frame, text=field.title(), variable=self.field_vars[field],
+                              command=lambda f=field: self.toggle_placeholder(f))
+            cb.pack(side="left", padx=5)
+
+            # Font size
+            size_frame = tk.Frame(field_frame)
+            size_frame.pack(side="left", padx=5)
+            tk.Label(size_frame, text="Size:").pack(side="left")
+            tk.Spinbox(size_frame, from_=10, to=100, textvariable=self.font_settings[field]["size"], 
+                      width=5, command=lambda f=field: self.update_preview(f)).pack(side="left", padx=2)
+            
+            # Color button
+            color_btn = tk.Button(field_frame, text="Color", 
+                                command=lambda f=field: self.choose_color(f),
+                                relief="flat", bg="#f0f0f0")
+            color_btn.pack(side="right")
+
+        # Create new placeholders
+        if self.original_image:
+            for field in self.fields:
+                self.create_placeholder(field)
+
     def preview_certificate(self):
         if not self.original_image:
             messagebox.showwarning("Warning", "Template not loaded!")
@@ -385,38 +374,36 @@ class CertificateApp:
             return
 
         # Automatically select the first student
-        student = self.excel_data[0]  # Always preview the first student
+        student = self.excel_data[0]
 
         # Create a copy of the image to work on
         img = self.original_image.copy()
         draw = ImageDraw.Draw(img)
         placeholder_positions = self.get_placeholder_positions()
-        font_path = "arial.ttf"  # Make sure this font file is available
+        font_path = "arial.ttf"
 
-        for field, include_var in [
-            ("Name", self.include_name),
-            ("ID", self.include_id),
-            ("Start Date", self.include_start),
-            ("End Date", self.include_end)
-        ]:
-            if include_var.get():
-                x, y = placeholder_positions[field]
-                size = self.font_settings[field]["size"].get()
-                color = self.font_settings[field]["color"].get()
+        for field in self.fields:
+            if self.field_vars[field].get() and field in placeholder_positions:
                 try:
-                    font = ImageFont.truetype(font_path, size)
-                except IOError:
-                    font = ImageFont.load_default()
-                
-                # Calculate the width of the text to adjust the position
-                text_width = draw.textlength(student[field], font=font)
+                    x, y = placeholder_positions[field]
+                    size = self.font_settings[field]["size"].get()
+                    color = self.font_settings[field]["color"].get()
+                    try:
+                        font = ImageFont.truetype(font_path, size)
+                    except IOError:
+                        font = ImageFont.load_default()
+                    
+                    # Calculate the width of the text to adjust the position
+                    text_width = draw.textlength(student[field], font=font)
 
-                # If it's the Name field, adjust the x to center the text
-                if field == "Name":
-                    x = (img.width - text_width) // 2  # Center the text horizontally
+                    # If it's the first field, center it
+                    if field == self.fields[0]:
+                        x = (img.width - text_width) // 2
 
-                # Apply the text to the image
-                draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                    # Apply the text to the image
+                    draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                except Exception as e:
+                    print(f"Error drawing text for {field}: {e}")
 
         # Show preview in a new window
         preview_win = tk.Toplevel(self.root)
@@ -428,11 +415,10 @@ class CertificateApp:
 
         # Label to display the image in the preview window
         label = tk.Label(preview_win, image=preview_photo)
-        label.image = preview_photo  # Keep a reference to the image
+        label.image = preview_photo
         label.pack()
 
-        preview_win.mainloop()  # Start the Tkinter event loop for the preview window
-
+        preview_win.mainloop()
 
     def generate_certificates(self):
         if not self.excel_data:
@@ -467,54 +453,52 @@ class CertificateApp:
         def generate_certificates_in_thread():
             nonlocal generated_count
             total_students = len(self.excel_data)
+            placeholder_positions = self.get_placeholder_positions()
     
             for i, student in enumerate(self.excel_data):
                 pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
-            pdf.add_page()
+                pdf.add_page()
     
-            original_img = self.original_image.copy()
-            draw = ImageDraw.Draw(original_img)
-
-            placeholder_positions = self.get_placeholder_positions()
+                original_img = self.original_image.copy()
+                draw = ImageDraw.Draw(original_img)
         
                 # Add text fields
-            for field, include_var in [
-                    ("Name", self.include_name),
-                    ("ID", self.include_id),
-                    ("Start Date", self.include_start),
-                    ("End Date", self.include_end)
-                ]:
-                    if include_var.get():
-                        x, y = placeholder_positions[field]
-                        size = self.font_settings[field]["size"].get()
-                        color = self.font_settings[field]["color"].get()
+                for field in self.fields:
+                    if self.field_vars[field].get() and field in placeholder_positions:
                         try:
-                            font = ImageFont.truetype(font_path, size)
-                        except IOError:
-                            font = ImageFont.load_default()
-                        
-                        # Calculate the width of the text to adjust the position
-                        text_width = draw.textlength(student[field], font=font)
+                            x, y = placeholder_positions[field]
+                            size = self.font_settings[field]["size"].get()
+                            color = self.font_settings[field]["color"].get()
+                            try:
+                                font = ImageFont.truetype(font_path, size)
+                            except IOError:
+                                font = ImageFont.load_default()
+                            
+                            # Calculate the width of the text to adjust the position
+                            text_width = draw.textlength(student[field], font=font)
     
-                        # If it's the Name field, adjust the x to center the text
-                        if field == "Name":
-                            x = (original_img.width - text_width) // 2  # Center the text horizontally
+                            # If it's the first field, center it
+                            if field == self.fields[0]:
+                                x = (original_img.width - text_width) // 2
     
-                        # Apply the text to the image
-                        draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                            # Apply the text to the image
+                            draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                        except Exception as e:
+                            print(f"Error drawing text for {field}: {e}")
     
-            temp_img_path = "temp_certificate.png"
-            original_img.save(temp_img_path)
-
-            pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
-
-            safe_name = re.sub(r'[^\w\-_. ]', '', student['Name']).strip()
-            pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
-            pdf.output(pdf_output_path)
-            generated_count += 1
+                temp_img_path = "temp_certificate.png"
+                original_img.save(temp_img_path)
     
-            if os.path.exists(temp_img_path):
-                os.remove(temp_img_path)
+                pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
+    
+                # Use the first field as the filename
+                safe_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
+                pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
+                pdf.output(pdf_output_path)
+                generated_count += 1
+    
+                if os.path.exists(temp_img_path):
+                    os.remove(temp_img_path)
     
                 # Update progress after each certificate is generated
                 update_progressbar(i + 1, total_students)
@@ -535,21 +519,19 @@ class CertificateApp:
                 messagebox.showwarning("Warning", "Template path not set!")
                 return
 
+            # Get current field settings
+            field_settings = {}
+            for field in self.fields:
+                field_settings[field] = {
+                    "size": self.font_settings[field]["size"].get(),
+                    "color": self.font_settings[field]["color"].get(),
+                    "visible": self.field_vars[field].get()
+                }
+
             project_data = {
                 "template_path": self.template_path,
                 "positions": self.get_placeholder_positions(),
-                "font_settings": {
-                    field: {
-                        "size": self.font_settings[field]["size"].get(),
-                        "color": self.font_settings[field]["color"].get()
-                    } for field in self.font_settings
-                },
-                "attributes": {
-                    "Name": self.include_name.get(),
-                    "ID": self.include_id.get(),
-                    "Start Date": self.include_start.get(),
-                    "End Date": self.include_end.get()
-                },
+                "field_settings": field_settings,
                 "excel_path": self.excel_path if hasattr(self, 'excel_path') else None
             }
     
@@ -594,38 +576,59 @@ class CertificateApp:
                 self.canvas.config(width=new_size[0], height=new_size[1])
                 self.canvas.create_image(0, 0, image=self.display_image, anchor="nw")
 
-            # Load font settings
-            if "font_settings" in project_data:
-                for field in project_data["font_settings"]:
-                    if field in self.font_settings:
-                        self.font_settings[field]["size"].set(project_data["font_settings"][field]["size"])
-                        self.font_settings[field]["color"].set(project_data["font_settings"][field]["color"])
-
-            # Load attributes
-            if "attributes" in project_data:
-                self.include_name.set(project_data["attributes"].get("Name", True))
-                self.include_id.set(project_data["attributes"].get("ID", True))
-                self.include_start.set(project_data["attributes"].get("Start Date", True))
-                self.include_end.set(project_data["attributes"].get("End Date", True))
-
-            # Create placeholders with updated settings
-            for label in ["Name", "ID", "Start Date", "End Date"]:
-                self.create_placeholder(label)
-
-            # Load positions after placeholders are created
-            if "positions" in project_data:
-                for label, (x, y) in project_data["positions"].items():
-                    if label in self.placeholders:
-                        self.canvas.coords(self.placeholders[label], x / self.scale_x, y / self.scale_y)
-
-            # Load Excel data last
+            # Load Excel data if path exists
             if project_data.get("excel_path") and os.path.exists(project_data["excel_path"]):
                 self.excel_path = project_data["excel_path"]
                 self.load_excel(self.excel_path)
 
+            # Load field settings and positions
+            if "field_settings" in project_data and "positions" in project_data:
+                for field in self.fields:
+                    if field in project_data["field_settings"]:
+                        settings = project_data["field_settings"][field]
+                        self.font_settings[field]["size"].set(settings["size"])
+                        self.font_settings[field]["color"].set(settings["color"])
+                        self.field_vars[field].set(settings["visible"])
+
+                # Create placeholders with saved positions
+                positions = project_data["positions"]
+                for field in self.fields:
+                    if field in positions:
+                        x, y = positions[field]
+                        # Scale coordinates back to display size
+                        scaled_x = x / self.scale_x
+                        scaled_y = y / self.scale_y
+                        # Create placeholder with is_update=True to prevent centering
+                        self.create_placeholder(field, scaled_x, scaled_y, is_update=True)
+
             messagebox.showinfo("Loaded", "Project loaded successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load project: {e}")
+
+    def render_placeholder(self, field):
+        try:
+            size = self.font_settings[field]["size"].get()
+            color = self.font_settings[field]["color"].get()
+            
+            sample_value = self.excel_data[0][field] if self.excel_data else field
+            
+            font_path = "arial.ttf"
+            try:
+                scaled_font_size = max(10, int(size / self.scale_y))
+                font = ImageFont.truetype(font_path, scaled_font_size)
+            except IOError:
+                font = ImageFont.load_default()
+            
+            img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
+            draw = ImageDraw.Draw(img)
+            draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
+            bbox = img.getbbox()
+            cropped_img = img.crop(bbox)
+            
+            return ImageTk.PhotoImage(cropped_img)
+        except Exception as e:
+            print(f"Error rendering placeholder: {e}")
+            return None
 
 
 
