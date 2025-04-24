@@ -97,12 +97,11 @@ class CertificateApp:
         self.font_frame.pack(fill="x", pady=(0, 10))
 
         # Add color space selection
-        color_space_frame = tk.Frame(self.font_frame)
+        color_space_frame = tk.LabelFrame(self.font_frame, text="Color Space")
         color_space_frame.pack(fill="x", pady=5)
-        tk.Label(color_space_frame, text="Color Space:").pack(side="left", padx=5)
         color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
-                                      values=["RGB", "CMYK"], state="readonly", width=10)
-        color_space_menu.pack(side="left", padx=5)
+                                      values=["RGB", "CMYK", "Both"], state="readonly", width=10)
+        color_space_menu.pack(side="left", padx=5, pady=5)
         color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
 
         # ---- Action buttons ----
@@ -576,6 +575,7 @@ class CertificateApp:
                 os.mkdir(f"{output_dir}/RGB")
             except:
                 print("Folder Already Exists")
+        
     
         font_path = "arial.ttf"
         generated_count = 0
