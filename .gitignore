@@ -27,3 +27,4 @@ venv/
 
 # Other
 *.zip
+.~lock.dummy_data2.xlsx#
