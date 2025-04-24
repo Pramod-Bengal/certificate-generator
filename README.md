@@ -1,66 +1,122 @@
 # Certificate Generator
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue.svg)](https://github.com/shahil-sk/certificate-generator)
-
-A Python-based application for generating certificates from templates with customizable text placement, fonts, and colors.
-
-## Repository
-
-This project is hosted on GitHub: [https://github.com/shahil-sk/certificate-generator](https://github.com/shahil-sk/certificate-generator)
+A powerful and user-friendly application for generating professional certificates from Excel data. This tool allows you to create customized certificates in bulk with dynamic field placement and styling.
 
 ## Features
 
-- Load PNG template images
-- Import student data from Excel files
-- Drag-and-drop text placement
-- Customizable font sizes and colors
-- Preview certificates before generation
-- Save and load placeholder positions
-- Generate PDF certificates in bulk
-- Progress tracking for batch generation
+- **Dynamic Field Handling**
+  - Import data from Excel files
+  - Automatic field detection from headers
+  - Customizable field visibility
+  - Individual field styling
 
-## Requirements
+- **Certificate Customization**
+  - Drag-and-drop field placement
+  - Adjustable font sizes
+  - Custom color selection
+  - Real-time preview
+  - First field auto-centering
 
-- Python 3.6 or higher
-- Pillow (PIL)
-- openpyxl
-- fpdf2
+- **Batch Processing**
+  - Generate multiple certificates at once
+  - Progress tracking
+  - PDF output format
+  - Automatic file naming
+
+- **Project Management**
+  - Save certificate layouts
+  - Load previous projects
+  - Preserve all settings and positions
 
 ## Installation
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/shahil-sk/certificate-generator.git
-   cd certificate-generator
-   ```
+### Option 1: Windows Executable (Recommended for Windows Users)
+1. Download the latest release from the [Releases](https://github.com/yourusername/certificate-generator/releases) page
+2. Extract the downloaded ZIP file
+3. Run `certificate-generator.exe`
 
-2. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Option 2: From Source
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/certificate-generator.git
+cd certificate-generator
+```
+
+2. Install required packages:
+```bash
+pip install -r requirements.txt
+```
+
+## Requirements
+
+### For Windows Executable
+- Windows 10 or later
+- No additional software required
+
+### For Source Installation
+- Python 3.x
+- Required packages:
+  - tkinter
+  - Pillow (PIL)
+  - openpyxl
+  - fpdf
 
 ## Usage
 
-1. Run the application:
-   ```bash
-   python script.py
-   ```
+1. **Prepare Your Data**
+   - Create an Excel file with headers for each field
+   - Add student data in rows below the headers
+   - Save the file in .xlsx format
 
-2. Load a template image (PNG format)
-3. Load student data from an Excel file
-4. Drag the placeholders to desired positions
-5. Customize font sizes and colors
-6. Preview the certificate
-7. Generate certificates for all students
+2. **Load Template and Data**
+   - Click "Load Template" to select your certificate template (PNG format)
+   - Click "Load Excel" to import your student data
 
-## Excel File Format
+3. **Customize Fields**
+   - Use checkboxes to toggle field visibility
+   - Adjust font sizes using the spinners
+   - Click "Color" to change text color
+   - Drag and drop fields to position them
+   - First field will be automatically centered
 
-The Excel file should have the following columns:
-- Name
-- ID
-- Start Date
-- End Date
+4. **Preview and Generate**
+   - Click "Preview" to see how the certificate will look
+   - Click "Generate" to create PDF certificates
+   - Select output directory for the generated files
+
+
+## Saving and Loading Projects
+
+- Click "Project" > "Save Project" to save your current layout
+- Click "Project" > "Load Project" to restore a previous layout
+- Project files (.certproj) contain:
+  - Template path
+  - Field positions
+  - Font settings
+  - Excel data path
+
+## Known Issues
+
+- None reported
+
+## Future Improvements
+
+- Template customization options
+- Additional font support
+- More export formats
+- Batch processing improvements
+- Template library
+- Custom field validation
+- Additional platform executables (macOS, Linux)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers. 
