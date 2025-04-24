@@ -10,6 +10,7 @@ import json
 import threading
 import sys
 import platform
+import colorsys
 
 
 
@@ -41,6 +42,9 @@ class CertificateApp:
         self.include_id = tk.BooleanVar(value=True)
         self.include_start = tk.BooleanVar(value=True)
         self.include_end = tk.BooleanVar(value=True)
+
+        # Add color space selection
+        self.color_space = tk.StringVar(value="RGB")  # Default to RGB
 
         self.setup_ui()
         
@@ -92,17 +96,26 @@ class CertificateApp:
         self.font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=10, pady=10)
         self.font_frame.pack(fill="x", pady=(0, 10))
 
+        # Add color space selection
+        color_space_frame = tk.Frame(self.font_frame)
+        color_space_frame.pack(fill="x", pady=5)
+        tk.Label(color_space_frame, text="Color Space:").pack(side="left", padx=5)
+        color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
+                                      values=["RGB", "CMYK"], state="readonly", width=10)
+        color_space_menu.pack(side="left", padx=5)
+        color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
+
         # ---- Action buttons ----
         action_frame = tk.LabelFrame(settings_frame, padx=10, pady=10)
         action_frame.pack(fill="x", pady=(10, 10))
 
         preview_btn = tk.Button(action_frame, text="Preview", command=self.preview_certificate, 
                               bg="#4CAF50", fg="white", relief="flat", padx=10)
-        preview_btn.pack(side="left", padx=5)
+        preview_btn.pack(side="left")
 
         generate_btn = tk.Button(action_frame, text="Generate", command=self.generate_certificates,
                                bg="#2196F3", fg="white", relief="flat", padx=10)
-        generate_btn.pack(side="left", padx=5)
+        generate_btn.pack(side="right")
 
         # ---- Center Canvas Area ----
         center_panel = tk.Frame(main_frame)
@@ -165,18 +178,131 @@ class CertificateApp:
         except Exception as e:
             print(f"Error setting icon: {e}")
 
+    def update_color_space(self, event=None):
+        """Update all field colors when color space changes"""
+        for field in self.fields:
+            if field in self.font_settings:
+                current_color = self.font_settings[field]["color"].get()
+                if self.color_space.get() == "RGB":
+                    # Convert CMYK to RGB if needed
+                    if current_color.startswith("cmyk("):
+                        rgb_color = self.cmyk_to_rgb(current_color)
+                        self.font_settings[field]["color"].set(rgb_color)
+                else:  # CMYK
+                    # Convert RGB to CMYK if needed
+                    if current_color.startswith("#"):
+                        cmyk_color = self.rgb_to_cmyk(current_color)
+                        self.font_settings[field]["color"].set(cmyk_color)
+                self.update_preview(field)
+
     def choose_color(self, field):
-        color = colorchooser.askcolor(title=f"Choose color for {field}")
-        if color[1]:
-            self.font_settings[field]["color"].set(color[1])
-            self.update_preview(field)
+        """Open color chooser with appropriate color space"""
+        current_color = self.font_settings[field]["color"].get()
+        
+        if self.color_space.get() == "RGB":
+            # RGB color chooser
+            color = colorchooser.askcolor(title=f"Choose RGB color for {field}", 
+                                        initialcolor=current_color if current_color.startswith("#") else "#000000")
+            if color[1]:
+                self.font_settings[field]["color"].set(color[1])
+        else:
+            # CMYK color chooser
+            if current_color.startswith("cmyk("):
+                c, m, y, k = map(float, current_color[5:-1].split(","))
+            else:
+                c, m, y, k = 0, 0, 0, 0
+            
+            cmyk_window = tk.Toplevel(self.root)
+            cmyk_window.title(f"Choose CMYK color for {field}")
+            
+            # Create CMYK sliders
+            c_var = tk.DoubleVar(value=c)
+            m_var = tk.DoubleVar(value=m)
+            y_var = tk.DoubleVar(value=y)
+            k_var = tk.DoubleVar(value=k)
+            
+            def update_color(*args):
+                cmyk_color = f"cmyk({c_var.get():.2f},{m_var.get():.2f},{y_var.get():.2f},{k_var.get():.2f})"
+                self.font_settings[field]["color"].set(cmyk_color)
+                preview_label.config(bg=self.cmyk_to_rgb(cmyk_color))
+            
+            # Create sliders
+            tk.Label(cmyk_window, text="Cyan:").grid(row=0, column=0, padx=5, pady=5)
+            tk.Scale(cmyk_window, from_=0, to=1, resolution=0.01, variable=c_var, 
+                    command=update_color, orient="horizontal").grid(row=0, column=1, padx=5, pady=5)
+            
+            tk.Label(cmyk_window, text="Magenta:").grid(row=1, column=0, padx=5, pady=5)
+            tk.Scale(cmyk_window, from_=0, to=1, resolution=0.01, variable=m_var, 
+                    command=update_color, orient="horizontal").grid(row=1, column=1, padx=5, pady=5)
+            
+            tk.Label(cmyk_window, text="Yellow:").grid(row=2, column=0, padx=5, pady=5)
+            tk.Scale(cmyk_window, from_=0, to=1, resolution=0.01, variable=y_var, 
+                    command=update_color, orient="horizontal").grid(row=2, column=1, padx=5, pady=5)
+            
+            tk.Label(cmyk_window, text="Black:").grid(row=3, column=0, padx=5, pady=5)
+            tk.Scale(cmyk_window, from_=0, to=1, resolution=0.01, variable=k_var, 
+                    command=update_color, orient="horizontal").grid(row=3, column=1, padx=5, pady=5)
+            
+            # Preview
+            preview_label = tk.Label(cmyk_window, width=20, height=10)
+            preview_label.grid(row=4, column=0, columnspan=2, pady=10)
+            update_color()
+            
+            # OK button
+            tk.Button(cmyk_window, text="OK", command=cmyk_window.destroy).grid(row=5, column=0, columnspan=2, pady=10)
+            
+            cmyk_window.transient(self.root)
+            cmyk_window.grab_set()
+            self.root.wait_window(cmyk_window)
+        
+        self.update_preview(field)
+
+    def rgb_to_cmyk(self, rgb_color):
+        """Convert RGB hex color to CMYK string"""
+        if rgb_color.startswith("#"):
+            r = int(rgb_color[1:3], 16) / 255
+            g = int(rgb_color[3:5], 16) / 255
+            b = int(rgb_color[5:7], 16) / 255
+            
+            k = 1 - max(r, g, b)
+            if k == 1:
+                c = m = y = 0
+            else:
+                c = (1 - r - k) / (1 - k)
+                m = (1 - g - k) / (1 - k)
+                y = (1 - b - k) / (1 - k)
+            
+            return f"cmyk({c:.2f},{m:.2f},{y:.2f},{k:.2f})"
+        return rgb_color
+
+    def cmyk_to_rgb(self, cmyk_color):
+        """Convert CMYK string to RGB hex color"""
+        if cmyk_color.startswith("cmyk("):
+            c, m, y, k = map(float, cmyk_color[5:-1].split(","))
+            
+            r = 255 * (1 - c) * (1 - k)
+            g = 255 * (1 - m) * (1 - k)
+            b = 255 * (1 - y) * (1 - k)
+            
+            return f"#{int(r):02x}{int(g):02x}{int(b):02x}"
+        return cmyk_color
 
     def hex_to_rgb(self, hex_color):
-        # Get the string value from StringVar if it's a StringVar
+        """Convert hex color to RGB tuple, handling both RGB and CMYK"""
         if isinstance(hex_color, tk.StringVar):
             hex_color = hex_color.get()
-        hex_color = hex_color.lstrip('#')
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        
+        if hex_color.startswith("cmyk("):
+            # Convert CMYK to RGB
+            c, m, y, k = map(float, hex_color[5:-1].split(","))
+            r = int(255 * (1 - c) * (1 - k))
+            g = int(255 * (1 - m) * (1 - k))
+            b = int(255 * (1 - y) * (1 - k))
+            return (r, g, b)
+        else:
+            # Handle RGB hex color
+            hex_color = hex_color.lstrip('#')
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def load_template(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png")])
@@ -218,8 +344,14 @@ class CertificateApp:
         else:
             # For the first field, center it horizontally
             if field == self.fields[0] and not is_update:
-                x = self.canvas.winfo_width() // 2
-                y = 50
+                # Get the width of the placeholder
+                preview_img = self.render_placeholder(field)
+                if preview_img:
+                    placeholder_width = preview_img.width()
+                    # Calculate centered position based on canvas width
+                    canvas_width = self.canvas.winfo_width()
+                    x = (canvas_width - placeholder_width) // 2
+                    y = 50  # Default vertical position
             else:
                 x = 50
                 y = 50
@@ -230,12 +362,12 @@ class CertificateApp:
             img_label = tk.Label(self.canvas, image=preview_img, bg="white")
             img_label.image = preview_img
 
-            # For the first field, center it horizontally only on initial creation
+            # For the first field, ensure it's centered horizontally
             if field == self.fields[0] and not is_update:
-                # Get the width of the placeholder
+                # Recalculate centered position based on actual placeholder width
                 placeholder_width = preview_img.width()
-                # Calculate centered position
-                x = (self.canvas.winfo_width() - placeholder_width) // 2
+                canvas_width = self.canvas.winfo_width()
+                x = (canvas_width - placeholder_width) // 2
 
             item = self.canvas.create_window(x, y, window=img_label, anchor="nw")
 
@@ -397,8 +529,9 @@ class CertificateApp:
                     text_width = draw.textlength(student[field], font=font)
 
                     # If it's the first field, center it
-                    if field == self.fields[0]:
-                        x = (img.width - text_width) // 2
+                    # if field == self.fields[0]:
+                    #     x = (img.width - text_width) // 2
+                    x = x - 1
 
                     # Apply the text to the image
                     draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
@@ -432,6 +565,17 @@ class CertificateApp:
         output_dir = filedialog.askdirectory(title="Select Output Folder")
         if not output_dir:
             return
+        
+        if self.color_space.get() == "CMYK":
+            try:
+                os.mkdir(f"{output_dir}/CMYK")
+            except:
+                print("Folder Already Exists")
+        elif self.color_space.get() == "RGB":
+            try:
+                os.mkdir(f"{output_dir}/RGB")
+            except:
+                print("Folder Already Exists")
     
         font_path = "arial.ttf"
         generated_count = 0
@@ -478,8 +622,9 @@ class CertificateApp:
                             text_width = draw.textlength(student[field], font=font)
     
                             # If it's the first field, center it
-                            if field == self.fields[0]:
-                                x = (original_img.width - text_width) // 2
+                            # if field == self.fields[0]:
+                            #     x = (original_img.width - text_width) // 2
+                            x = x - 1
     
                             # Apply the text to the image
                             draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
@@ -493,7 +638,11 @@ class CertificateApp:
     
                 # Use the first field as the filename
                 safe_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
-                pdf_output_path = os.path.join(output_dir, f"{safe_name}_certificate.pdf")
+                    
+                if self.color_space.get() == "CMYK":
+                    pdf_output_path = os.path.join(f"{output_dir}/CMYK", f"{safe_name}_certificate.pdf")
+                else:
+                    pdf_output_path = os.path.join(f"{output_dir}/RGB", f"{safe_name}_certificate.pdf")
                 pdf.output(pdf_output_path)
                 generated_count += 1
     
@@ -532,7 +681,8 @@ class CertificateApp:
                 "template_path": self.template_path,
                 "positions": self.get_placeholder_positions(),
                 "field_settings": field_settings,
-                "excel_path": self.excel_path if hasattr(self, 'excel_path') else None
+                "excel_path": self.excel_path if hasattr(self, 'excel_path') else None,
+                "color_space": self.color_space.get()  # Save color space
             }
     
             file_path = filedialog.asksaveasfilename(defaultextension=".certproj", filetypes=[("Certificate Project", "*.certproj")])
@@ -581,6 +731,10 @@ class CertificateApp:
                 self.excel_path = project_data["excel_path"]
                 self.load_excel(self.excel_path)
 
+            # Load color space
+            if "color_space" in project_data:
+                self.color_space.set(project_data["color_space"])
+
             # Load field settings and positions
             if "field_settings" in project_data and "positions" in project_data:
                 for field in self.fields:
@@ -600,8 +754,6 @@ class CertificateApp:
                         scaled_y = y / self.scale_y
                         # Create placeholder with is_update=True to prevent centering
                         self.create_placeholder(field, scaled_x, scaled_y, is_update=True)
-
-            messagebox.showinfo("Loaded", "Project loaded successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load project: {e}")
 
