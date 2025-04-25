@@ -358,7 +358,7 @@ class CertificateApp:
         # Create new placeholder
         preview_img = self.render_placeholder(field)
         if preview_img:
-            img_label = tk.Label(self.canvas, image=preview_img, bg="white")
+            img_label = tk.Label(self.canvas, image=preview_img, bg="Yellow")
             img_label.image = preview_img
 
             # For the first field, ensure it's centered horizontally
