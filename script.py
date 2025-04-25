@@ -100,7 +100,7 @@ class CertificateApp:
         color_space_frame = tk.LabelFrame(self.font_frame, text="Color Space")
         color_space_frame.pack(fill="x", pady=5)
         color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
-                                      values=["RGB", "CMYK", "Both"], state="readonly", width=10)
+                                      values=["RGB", "CMYK"], state="readonly", width=10)
         color_space_menu.pack(side="left", padx=5, pady=5)
         color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
 
@@ -565,16 +565,11 @@ class CertificateApp:
         if not output_dir:
             return
         
-        if self.color_space.get() == "CMYK":
-            try:
-                os.mkdir(f"{output_dir}/CMYK")
-            except:
-                print("Folder Already Exists")
-        elif self.color_space.get() == "RGB":
-            try:
-                os.mkdir(f"{output_dir}/RGB")
-            except:
-                print("Folder Already Exists")
+        try:
+            os.mkdir(f"{output_dir}/CMYK")
+            os.mkdir(f"{output_dir}/RGB")
+        except:
+            print("Error Or folder already exists")
         
     
         font_path = "arial.ttf"
