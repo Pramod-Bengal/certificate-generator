@@ -8,6 +8,7 @@ __pycache__/
 /dist
 *.AppImage
 /CertGen
+.gitignore
 
 # Certificate outputs
 *.pdf
