@@ -1,5 +1,5 @@
 {
-    "template_path": "/home/sk/Playground/cert_gen/template(Landscape).png",
+    "template_path": "template(Landscape).png",
     "positions": {
         "email": [
             185.92994923857867,
@@ -49,6 +49,6 @@
             "visible": true
         }
     },
-    "excel_path": "/home/sk/Playground/cert_gen/dummy_data2.xlsx",
+    "excel_path": "dummy_data2.xlsx",
     "color_space": "CMYK"
 }
