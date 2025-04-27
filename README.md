@@ -94,5 +94,3 @@ Need help? [Open an issue](https://github.com/yourusername/certificate-generator
 ---
 
 **Keywords**: bulk certificate generator, Excel to certificate, certificate automation, customizable certificate creator, batch certificate PDF tool
-
-Let me know if you'd like a version for a website landing page or app store listing!
