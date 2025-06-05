@@ -54,86 +54,80 @@ class CertificateApp:
         
     def setup_ui(self):
         self.master.title("Certificate Generator")
-        self.master.configure(padx=10, pady=10)
+        self.master.configure(padx=15, pady=15, bg="#f5f5f5")  # Lighter background
 
         # ---- Top Navigation Bar ----
-        nav_frame = tk.Frame(self.master, bg="#f0f0f0", height=40)
-        nav_frame.pack(fill="x", pady=(0, 5))
+        nav_frame = tk.Frame(self.master, bg="#ffffff", height=45)  # Taller nav bar
+        nav_frame.pack(fill="x", pady=(0, 10))
         
         # File Operations
-        file_menu = tk.Menubutton(nav_frame, text="Project", bg="#ffffff", relief="flat")
+        file_menu = tk.Menubutton(nav_frame, text="Project", bg="#ffffff", relief="flat", 
+                                 font=("Arial", 10, "bold"), padx=10)
         file_menu.pack(side="left", padx=5)
         file_menu.menu = tk.Menu(file_menu, tearoff=0)
         file_menu["menu"] = file_menu.menu
         file_menu.menu.add_command(label="Save Project", command=self.save_project)
         file_menu.menu.add_command(label="Load Project", command=self.load_project)
 
-        # Load buttons
+        # Load buttons with better styling
         load_template_btn = tk.Button(nav_frame, text="Load Template", command=self.load_template, 
-                                    fg="black", bg="#e0e0e0", relief="flat", padx=8)
+                                    fg="black", bg="#e8e8e8", relief="flat", padx=12, pady=5,
+                                    font=("Arial", 9))
         load_template_btn.pack(side="left", padx=5)
 
         load_excel_btn = tk.Button(nav_frame, text="Load Excel", command=self.load_excel, 
-                                 fg="black", bg="#e0e0e0", relief="flat", padx=8)
+                                 fg="black", bg="#e8e8e8", relief="flat", padx=12, pady=5,
+                                 font=("Arial", 9))
         load_excel_btn.pack(side="left", padx=5)
 
-        # Add status bar
-        self.status_bar = tk.Label(self.master, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        # Add status bar with better styling
+        self.status_bar = tk.Label(self.master, text="Ready", bd=1, relief=tk.SUNKEN, 
+                                 anchor=tk.W, bg="#ffffff", padx=10, pady=5)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
         # ---- Main Content Area ----
-        main_frame = tk.Frame(self.master)
+        main_frame = tk.Frame(self.master, bg="#f5f5f5")
         main_frame.pack(fill="both", expand=True)
 
         # ---- Left Panel (Settings) ----
-        settings_frame = tk.Frame(main_frame, width=200)
-        settings_frame.pack(side="left", fill="y", padx=(0, 10))
+        settings_frame = tk.Frame(main_frame, width=250, bg="#ffffff", padx=10, pady=10)
+        settings_frame.pack(side="left", fill="y", padx=(0, 15))
 
         # ---- Field Toggles ----
-        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=5, pady=5)
-        self.toggle_frame.pack(fill="x", pady=(0, 5))
-
-        # ---- Font Settings ----
-        # self.font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=5, pady=5)
-        # self.font_frame.pack(fill="x", pady=(0, 5))
-
-        # # Add color space selection
-        # color_space_frame = tk.Frame(self.font_frame)
-        # color_space_frame.pack(fill="x", pady=2)
-        # tk.Label(color_space_frame, text="Color Space:").pack(side="left", padx=2)
-        # color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
-        #                               values=["RGB", "CMYK"], state="readonly", width=8)
-        # color_space_menu.pack(side="left", padx=2)
-        # color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
+        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=10, pady=10,
+                                        font=("Arial", 10, "bold"), bg="#ffffff")
+        self.toggle_frame.pack(fill="x", pady=(0, 10))
 
         # ---- Action buttons ----
-        action_frame = tk.Frame(settings_frame)
-        action_frame.pack(fill="x", pady=(5, 5))
+        action_frame = tk.Frame(settings_frame, bg="#ffffff")
+        action_frame.pack(fill="x", pady=(10, 5))
 
         preview_btn = tk.Button(action_frame, text="Preview", command=self.preview_certificate, 
-                              bg="#4CAF50", fg="white", relief="flat", padx=8)
-        preview_btn.pack(side="left", padx=2)
+                              bg="#4CAF50", fg="white", relief="flat", padx=15, pady=8,
+                              font=("Arial", 10, "bold"))
+        preview_btn.pack(side="left", padx=2, fill="x", expand=True)
 
         generate_btn = tk.Button(action_frame, text="Generate", command=self.generate_certificates,
-                               bg="#2196F3", fg="white", relief="flat", padx=8)
-        generate_btn.pack(side="right", padx=2)
-
-        # ---- Center Canvas Area ----
-        center_panel = tk.Frame(main_frame)
-        center_panel.pack(side="left", fill="both", expand=True)
-
-        self.canvas_frame = tk.Frame(center_panel, relief="sunken", borderwidth=1)
-        self.canvas_frame.pack(fill="both", expand=True)
-
-        self.canvas = tk.Canvas(self.canvas_frame, bg="white")
-        self.canvas.pack(fill="both", expand=True)
+                               bg="#2196F3", fg="white", relief="flat", padx=15, pady=8,
+                               font=("Arial", 10, "bold"))
+        generate_btn.pack(side="right", padx=2, fill="x", expand=True)
 
         # ---- Progress Bar ----
-        progress_frame = tk.Frame(self.master)
-        progress_frame.pack(fill="x", pady=10)
+        progress_frame = tk.Frame(settings_frame, bg="#ffffff")
+        progress_frame.pack(fill="x", pady=(10, 0))
+        self.progress = ttk.Progressbar(progress_frame, orient="horizontal", length=200, 
+                                      mode="determinate", style="Horizontal.TProgressbar")
+        self.progress.pack(fill="x", pady=(5, 0))
 
-        self.progress = ttk.Progressbar(progress_frame, orient="horizontal", length=300, mode="determinate")
-        self.progress.pack(side="left", padx=10, expand=True)
+        # ---- Center Canvas Area ----
+        center_panel = tk.Frame(main_frame, bg="#f5f5f5")
+        center_panel.pack(side="left", fill="both", expand=True)
+
+        self.canvas_frame = tk.Frame(center_panel, relief="solid", borderwidth=1, bg="#ffffff")
+        self.canvas_frame.pack(fill="both", expand=True, padx=5, pady=5)
+
+        self.canvas = tk.Canvas(self.canvas_frame, bg="white")
+        self.canvas.pack(fill="both", expand=True, padx=2, pady=2)
 
     def set_icon(self):
         """Set the application icon based on the operating system."""
@@ -494,9 +488,9 @@ class CertificateApp:
             widget.destroy()
 
         # Create a scrollable frame for fields
-        canvas = tk.Canvas(self.toggle_frame, height=300)
+        canvas = tk.Canvas(self.toggle_frame, height=300, bg="#ffffff", highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.toggle_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas)
+        scrollable_frame = tk.Frame(canvas, bg="#ffffff")
 
         scrollable_frame.bind(
             "<Configure>",
@@ -508,37 +502,35 @@ class CertificateApp:
 
         for field in self.fields:
             # Create field frame with a border and padding
-            field_frame = tk.Frame(scrollable_frame, relief="solid", borderwidth=1, padx=5, pady=3)
-            field_frame.pack(fill="x", pady=1, padx=2)
+            field_frame = tk.Frame(scrollable_frame, relief="solid", borderwidth=1, 
+                                 padx=10, pady=8, bg="#ffffff")
+            field_frame.pack(fill="x", pady=2, padx=2)
 
-            # Top row: Field name and toggle
-            top_frame = tk.Frame(field_frame)
-            top_frame.pack(fill="x", pady=(0, 3))
+            # Top row: Field name
+            top_frame = tk.Frame(field_frame, bg="#ffffff")
+            top_frame.pack(fill="x", pady=(0, 5))
             
-            field_label = tk.Label(top_frame, text=field.title(), font=("Arial", 9, "bold"), width=15)
+            field_label = tk.Label(top_frame, text=field.title(), 
+                                 font=("Arial", 10, "bold"), width=15, bg="#ffffff")
             field_label.pack(side="left", padx=2)
-            
-            # cb = tk.Checkbutton(top_frame, text="Show", variable=self.field_vars[field],
-            #                   command=lambda f=field: self.toggle_placeholder(f))
-            # cb.pack(side="right", padx=2)
 
             # Bottom row: Font settings
-            bottom_frame = tk.Frame(field_frame)
+            bottom_frame = tk.Frame(field_frame, bg="#ffffff")
             bottom_frame.pack(fill="x")
 
             # Font size
-            size_frame = tk.Frame(bottom_frame)
+            size_frame = tk.Frame(bottom_frame, bg="#ffffff")
             size_frame.pack(side="left", padx=2)
-            tk.Label(size_frame, text="Size:").pack(side="left")
+            tk.Label(size_frame, text="Size:", bg="#ffffff").pack(side="left")
             size_spinbox = tk.Spinbox(size_frame, from_=10, to=200, 
                                     textvariable=self.font_settings[field]["size"],
                                     width=4, command=lambda f=field: self.update_preview(f))
             size_spinbox.pack(side="left")
 
             # Font selection
-            font_frame = tk.Frame(bottom_frame)
+            font_frame = tk.Frame(bottom_frame, bg="#ffffff")
             font_frame.pack(side="left", padx=2)
-            tk.Label(font_frame, text="Font:").pack(side="left")
+            tk.Label(font_frame, text="Font:", bg="#ffffff").pack(side="left")
             font_option = ttk.Combobox(font_frame, values=list(self.available_fonts.keys()),
                                      textvariable=self.font_settings[field]["font_name"],
                                      width=15, state="readonly")
@@ -546,14 +538,16 @@ class CertificateApp:
             font_option.bind("<<ComboboxSelected>>", lambda e, f=field: self.update_preview(f))
 
             # Color button with preview
-            color_frame = tk.Frame(bottom_frame)
+            color_frame = tk.Frame(bottom_frame, bg="#ffffff")
             color_frame.pack(side="right", padx=2)
-            color_preview = tk.Label(color_frame, width=2, height=1, 
-                                   bg=self.font_settings[field]["color"].get())
-            color_preview.pack(side="left")
+            color_preview = tk.Label(color_frame, width=3, height=1, 
+                                   bg=self.font_settings[field]["color"].get(),
+                                   relief="solid", borderwidth=1)
+            color_preview.pack(side="left", padx=(0, 5))
             color_btn = tk.Button(color_frame, text="Color", 
                                 command=lambda f=field: self.choose_color(f),
-                                relief="flat", bg="#e0e0e0", padx=2)
+                                relief="flat", bg="#e8e8e8", padx=8, pady=2,
+                                font=("Arial", 9))
             color_btn.pack(side="left")
 
         # Pack the scrollbar and canvas
