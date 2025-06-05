@@ -47,81 +47,82 @@ class CertificateApp:
         # Add color space selection
         self.color_space = tk.StringVar(value="RGB")  # Default to RGB
 
+        # Load available fonts
+        self.available_fonts = self.load_available_fonts()
+        
         self.setup_ui()
         
     def setup_ui(self):
         self.master.title("Certificate Generator")
-        self.master.configure(padx=20, pady=20)
+        self.master.configure(padx=10, pady=10)
 
         # ---- Top Navigation Bar ----
-        nav_frame = tk.Frame(self.master, bg="#f0f0f0", height=50)
-        nav_frame.pack(fill="x", pady=(0, 10))
+        nav_frame = tk.Frame(self.master, bg="#f0f0f0", height=40)
+        nav_frame.pack(fill="x", pady=(0, 5))
         
-        # Right side of nav (Controls)
-        controls_frame = tk.Frame(nav_frame, bg="#f0f0f0")
-        controls_frame.pack(side="left", padx=10)
-
         # File Operations
-        file_menu = tk.Menubutton(controls_frame, text="Project", bg="#ffffff", relief="flat")
+        file_menu = tk.Menubutton(nav_frame, text="Project", bg="#ffffff", relief="flat")
         file_menu.pack(side="left", padx=5)
         file_menu.menu = tk.Menu(file_menu, tearoff=0)
         file_menu["menu"] = file_menu.menu
         file_menu.menu.add_command(label="Save Project", command=self.save_project)
         file_menu.menu.add_command(label="Load Project", command=self.load_project)
 
+        # Load buttons
+        load_template_btn = tk.Button(nav_frame, text="Load Template", command=self.load_template, 
+                                    fg="black", bg="#e0e0e0", relief="flat", padx=8)
+        load_template_btn.pack(side="left", padx=5)
+
+        load_excel_btn = tk.Button(nav_frame, text="Load Excel", command=self.load_excel, 
+                                 fg="black", bg="#e0e0e0", relief="flat", padx=8)
+        load_excel_btn.pack(side="left", padx=5)
+
+        # Add status bar
+        self.status_bar = tk.Label(self.master, text="Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
         # ---- Main Content Area ----
         main_frame = tk.Frame(self.master)
         main_frame.pack(fill="both", expand=True)
 
         # ---- Left Panel (Settings) ----
-        settings_frame = tk.Frame(main_frame, width=250)
-        settings_frame.pack(side="left", fill="y", padx=(0, 20))
-
-        # ---- Load Data ----
-        data_frame = tk.Frame(settings_frame, width=250)
-        data_frame.pack(fill="x", padx=(0.10))
-
-        load_template_btn = tk.Button(data_frame, text="Load Template", command=self.load_template, 
-                                    fg="black", bg="grey", relief="flat", padx=10)
-        load_template_btn.pack(side="left", padx=5)
-
-        load_excel_btn = tk.Button(data_frame, text="Load Excel", command=self.load_excel, 
-                                 fg="black", bg="grey", relief="flat", padx=10)
-        load_excel_btn.pack(side="left", padx=5)
+        settings_frame = tk.Frame(main_frame, width=200)
+        settings_frame.pack(side="left", fill="y", padx=(0, 10))
 
         # ---- Field Toggles ----
-        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=10, pady=10)
-        self.toggle_frame.pack(fill="x", pady=(0, 10))
+        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=5, pady=5)
+        self.toggle_frame.pack(fill="x", pady=(0, 5))
 
         # ---- Font Settings ----
-        self.font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=10, pady=10)
-        self.font_frame.pack(fill="x", pady=(0, 10))
+        # self.font_frame = tk.LabelFrame(settings_frame, text="Font Settings", padx=5, pady=5)
+        # self.font_frame.pack(fill="x", pady=(0, 5))
 
-        # Add color space selection
-        color_space_frame = tk.LabelFrame(self.font_frame, text="Color Space")
-        color_space_frame.pack(fill="x", pady=5)
-        color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
-                                      values=["RGB", "CMYK"], state="readonly", width=10)
-        color_space_menu.pack(side="left", padx=5, pady=5)
-        color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
+        # # Add color space selection
+        # color_space_frame = tk.Frame(self.font_frame)
+        # color_space_frame.pack(fill="x", pady=2)
+        # tk.Label(color_space_frame, text="Color Space:").pack(side="left", padx=2)
+        # color_space_menu = ttk.Combobox(color_space_frame, textvariable=self.color_space, 
+        #                               values=["RGB", "CMYK"], state="readonly", width=8)
+        # color_space_menu.pack(side="left", padx=2)
+        # color_space_menu.bind("<<ComboboxSelected>>", self.update_color_space)
 
         # ---- Action buttons ----
-        action_frame = tk.LabelFrame(settings_frame, padx=10, pady=10)
-        action_frame.pack(fill="x", pady=(10, 10))
+        action_frame = tk.Frame(settings_frame)
+        action_frame.pack(fill="x", pady=(5, 5))
 
         preview_btn = tk.Button(action_frame, text="Preview", command=self.preview_certificate, 
-                              bg="#4CAF50", fg="white", relief="flat", padx=10)
-        preview_btn.pack(side="left")
+                              bg="#4CAF50", fg="white", relief="flat", padx=8)
+        preview_btn.pack(side="left", padx=2)
 
         generate_btn = tk.Button(action_frame, text="Generate", command=self.generate_certificates,
-                               bg="#2196F3", fg="white", relief="flat", padx=10)
-        generate_btn.pack(side="right")
+                               bg="#2196F3", fg="white", relief="flat", padx=8)
+        generate_btn.pack(side="right", padx=2)
 
         # ---- Center Canvas Area ----
         center_panel = tk.Frame(main_frame)
         center_panel.pack(side="left", fill="both", expand=True)
 
-        self.canvas_frame = tk.Frame(center_panel, relief="sunken", borderwidth=2)
+        self.canvas_frame = tk.Frame(center_panel, relief="sunken", borderwidth=1)
         self.canvas_frame.pack(fill="both", expand=True)
 
         self.canvas = tk.Canvas(self.canvas_frame, bg="white")
@@ -129,7 +130,7 @@ class CertificateApp:
 
         # ---- Progress Bar ----
         progress_frame = tk.Frame(self.master)
-        progress_frame.pack(fill="x", pady=20)
+        progress_frame.pack(fill="x", pady=10)
 
         self.progress = ttk.Progressbar(progress_frame, orient="horizontal", length=300, mode="determinate")
         self.progress.pack(side="left", padx=10, expand=True)
@@ -309,27 +310,30 @@ class CertificateApp:
         if not file_path:
             return
 
-        self.template_path = file_path
-        self.original_image = Image.open(file_path)
-        original_width, original_height = self.original_image.size
+        try:
+            self.template_path = file_path
+            self.original_image = Image.open(file_path)
+            original_width, original_height = self.original_image.size
 
-        max_width, max_height = 1000, 700
-        ratio = min(max_width / original_width, max_height / original_height)
-        new_size = (int(original_width * ratio), int(original_height * ratio))
+            max_width, max_height = 1000, 700
+            ratio = min(max_width / original_width, max_height / original_height)
+            new_size = (int(original_width * ratio), int(original_height * ratio))
 
-        self.scale_x = original_width / new_size[0]
-        self.scale_y = original_height / new_size[1]
+            self.scale_x = original_width / new_size[0]
+            self.scale_y = original_height / new_size[1]
 
-        resized_img = self.original_image.resize(new_size)
-        self.display_image = ImageTk.PhotoImage(resized_img)
+            resized_img = self.original_image.resize(new_size)
+            self.display_image = ImageTk.PhotoImage(resized_img)
 
-        self.canvas.config(width=new_size[0], height=new_size[1])
-        self.canvas.delete("all")
-        self.canvas.create_image(0, 0, image=self.display_image, anchor="nw")
+            self.canvas.config(width=new_size[0], height=new_size[1])
+            self.canvas.delete("all")
+            self.canvas.create_image(0, 0, image=self.display_image, anchor="nw")
 
-        # Create placeholders for all fields
-        for field in self.fields:
-            self.create_placeholder(field)
+            # Create placeholders for all fields
+            for field in self.fields:
+                self.create_placeholder(field)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error loading template: {str(e)}")
 
     def create_placeholder(self, field, x=None, y=None, is_update=False):
         if field not in self.fields:
@@ -342,62 +346,57 @@ class CertificateApp:
             x = x if x is not None else old_x
             y = y if y is not None else old_y
         else:
-            # For the first field, center it horizontally
-            if field == self.fields[0] and not is_update:
-                # Get the width of the placeholder
-                preview_img = self.render_placeholder(field)
-                if preview_img:
-                    placeholder_width = preview_img.width()
-                    # Calculate centered position based on canvas width
-                    canvas_width = self.canvas.winfo_width()
-                    x = (canvas_width - placeholder_width) // 2
-                    y = 50  # Default vertical position
-            else:
-                x = 50
-                y = 50
+            # For all fields, center them horizontally
+            preview_img = self.render_placeholder(field)
+            if preview_img:
+                placeholder_width = preview_img.width()
+                # Calculate centered position based on canvas width
+                canvas_width = self.canvas.winfo_width()
+                x = (canvas_width - placeholder_width) // 2
+                y = 50  # Default vertical position
 
         # Create new placeholder
         preview_img = self.render_placeholder(field)
         if preview_img:
-            img_label = tk.Label(self.canvas, image=preview_img, bg="Yellow")
-            img_label.image = preview_img
-
-            # For the first field, ensure it's centered horizontally
-            if field == self.fields[0] and not is_update:
-                # Recalculate centered position based on actual placeholder width
-                placeholder_width = preview_img.width()
-                canvas_width = self.canvas.winfo_width()
-                x = (canvas_width - placeholder_width) // 2
-
-            item = self.canvas.create_window(x, y, window=img_label, anchor="nw")
-
-            def start_drag(event):
-                self._drag_data = {
-                    "item": item,
-                    "x": self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx()),
-                    "y": self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
-                }
-
-            def do_drag(event):
-                new_x = self.canvas.canvasx(event.x_root - self.canvas.winfo_rootx())
-                new_y = self.canvas.canvasy(event.y_root - self.canvas.winfo_rooty())
-                dx = new_x - self._drag_data["x"]
-                dy = new_y - self._drag_data["y"]
-                self.canvas.move(self._drag_data["item"], dx, dy)
-                self._drag_data["x"] = new_x
-                self._drag_data["y"] = new_y
-
-            img_label.bind("<Button-1>", start_drag)
-            img_label.bind("<B1-Motion>", do_drag)
-
+            # Store the image reference
+            if not hasattr(self, '_placeholder_images'):
+                self._placeholder_images = {}
+            self._placeholder_images[field] = preview_img
+            
+            # Create text directly on canvas
+            item = self.canvas.create_image(x, y, image=preview_img, anchor="center")
+            self.canvas.tag_bind(item, "<Button-1>", lambda e, i=item: self.start_drag(e, i))
+            self.canvas.tag_bind(item, "<B1-Motion>", lambda e, i=item: self.do_drag(e, i))
             self.placeholders[field] = item
+
+    def start_drag(self, event, item):
+        self._drag_data = {
+            "item": item,
+            "x": event.x,
+            "y": event.y
+        }
+
+    def do_drag(self, event, item):
+        dx = event.x - self._drag_data["x"]
+        dy = event.y - self._drag_data["y"]
+        self.canvas.move(item, dx, dy)
+        self._drag_data["x"] = event.x
+        self._drag_data["y"] = event.y
 
     def toggle_placeholder(self, field):
         if field in self.placeholders:
             if self.field_vars[field].get():
-                self.canvas.itemconfig(self.placeholders[field], state="normal")
+                # Recreate the placeholder with the stored image
+                if hasattr(self, '_placeholder_images') and field in self._placeholder_images:
+                    x, y = self.canvas.coords(self.placeholders[field])
+                    self.canvas.delete(self.placeholders[field])
+                    item = self.canvas.create_image(x, y, image=self._placeholder_images[field], anchor="center")
+                    self.canvas.tag_bind(item, "<Button-1>", lambda e, i=item: self.start_drag(e, i))
+                    self.canvas.tag_bind(item, "<B1-Motion>", lambda e, i=item: self.do_drag(e, i))
+                    self.placeholders[field] = item
             else:
-                self.canvas.itemconfig(self.placeholders[field], state="hidden")
+                self.canvas.delete(self.placeholders[field])
+                del self.placeholders[field]
 
     def update_preview(self, field):
         if field in self.placeholders:
@@ -405,6 +404,8 @@ class CertificateApp:
             x, y = self.canvas.coords(self.placeholders[field])
             # Create placeholder with is_update=True to prevent centering
             self.create_placeholder(field, x, y, is_update=True)
+            # Update status
+            self.update_status(f"Updated {field} settings")
 
     def get_placeholder_positions(self):
         """Get scaled coordinates for actual certificate."""
@@ -427,38 +428,57 @@ class CertificateApp:
             return
         self.excel_path = file_path
 
-        wb = load_workbook(file_path)
-        sheet = wb.active
+        try:
+            wb = load_workbook(file_path)
+            sheet = wb.active
 
-        # Get field names from header row and normalize them
-        self.fields = [str(cell.value).strip().lower() for cell in sheet[1]]
-        
-        # Initialize field variables and font settings
-        self.field_vars = {}
-        self.font_settings = {}
-        for field in self.fields:
-            self.field_vars[field] = tk.BooleanVar(value=True)
-            self.font_settings[field] = {
-                "size": tk.IntVar(value=32),
-                "color": tk.StringVar(value="#000000")
-            }
+            # Get field names from header row and normalize them
+            self.fields = [str(cell.value).strip().lower() for cell in sheet[1] if cell.value]
+            
+            if not self.fields:
+                messagebox.showerror("Error", "No fields found in Excel file!")
+                return
 
-        # Load data
-        self.excel_data = []
-        for row in sheet.iter_rows(min_row=2, values_only=True):
-            student_data = {}
-            for i, value in enumerate(row):
-                if i < len(self.fields):
-                    if isinstance(value, datetime):
-                        value = value.strftime("%d-%m-%Y")
-                    student_data[self.fields[i]] = str(value)
-            self.excel_data.append(student_data)
+            # Initialize field variables and font settings
+            self.field_vars = {}
+            self.font_settings = {}
+            for field in self.fields:
+                self.field_vars[field] = tk.BooleanVar(value=True)
+                self.font_settings[field] = {
+                    "size": tk.IntVar(value=32),
+                    "color": tk.StringVar(value="#000000"),
+                    "font_name": tk.StringVar(value=list(self.available_fonts.keys())[0] if self.available_fonts else "Default")
+                }
 
-        print(f"Loaded {len(self.excel_data)} students with fields: {', '.join(self.fields)}")
-        
-        # Update UI with new fields
-        self.ensure_font_settings_keys()
-        self.update_ui_fields()
+            # Load data
+            self.excel_data = []
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                student_data = {}
+                for i, value in enumerate(row):
+                    if i < len(self.fields):
+                        if isinstance(value, datetime):
+                            value = value.strftime("%d-%m-%Y")
+                        student_data[self.fields[i]] = str(value) if value is not None else ""
+                if any(student_data.values()):  # Only add if there's at least one non-empty value
+                    self.excel_data.append(student_data)
+
+            if not self.excel_data:
+                messagebox.showwarning("Warning", "No data found in the Excel file!")
+                return
+
+            print(f"Loaded {len(self.excel_data)} students with fields: {', '.join(self.fields)}")
+            
+            # Update UI with new fields
+            self.update_ui_fields()
+            
+            # Create placeholders for all fields
+            if self.original_image:
+                for field in self.fields:
+                    self.create_placeholder(field)
+
+            messagebox.showinfo("Success", f"Successfully loaded {len(self.excel_data)} records!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error loading Excel file: {str(e)}")
 
     def update_ui_fields(self):
         """Update UI elements to reflect current fields."""
@@ -466,53 +486,85 @@ class CertificateApp:
         for placeholder in self.placeholders.values():
             self.canvas.delete(placeholder)
         self.placeholders.clear()
+        if hasattr(self, '_placeholder_images'):
+            self._placeholder_images.clear()
 
         # Update toggle frame
         for widget in self.toggle_frame.winfo_children():
             widget.destroy()
 
-        for field in self.fields:
-            # Create field frame
-            field_frame = tk.Frame(self.toggle_frame)
-            field_frame.pack(fill="x", pady=2)
+        # Create a scrollable frame for fields
+        canvas = tk.Canvas(self.toggle_frame, height=300)
+        scrollbar = ttk.Scrollbar(self.toggle_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
 
-            # Toggle checkbox
-            cb = tk.Checkbutton(field_frame, text=field.title(), variable=self.field_vars[field],
-                              command=lambda f=field: self.toggle_placeholder(f))
-            cb.pack(side="left", padx=5)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        for field in self.fields:
+            # Create field frame with a border and padding
+            field_frame = tk.Frame(scrollable_frame, relief="solid", borderwidth=1, padx=5, pady=3)
+            field_frame.pack(fill="x", pady=1, padx=2)
+
+            # Top row: Field name and toggle
+            top_frame = tk.Frame(field_frame)
+            top_frame.pack(fill="x", pady=(0, 3))
+            
+            field_label = tk.Label(top_frame, text=field.title(), font=("Arial", 9, "bold"), width=15)
+            field_label.pack(side="left", padx=2)
+            
+            # cb = tk.Checkbutton(top_frame, text="Show", variable=self.field_vars[field],
+            #                   command=lambda f=field: self.toggle_placeholder(f))
+            # cb.pack(side="right", padx=2)
+
+            # Bottom row: Font settings
+            bottom_frame = tk.Frame(field_frame)
+            bottom_frame.pack(fill="x")
 
             # Font size
-            size_frame = tk.Frame(field_frame)
-            size_frame.pack(side="left", padx=5)
+            size_frame = tk.Frame(bottom_frame)
+            size_frame.pack(side="left", padx=2)
             tk.Label(size_frame, text="Size:").pack(side="left")
-            tk.Spinbox(size_frame, from_=10, to=200, textvariable=self.font_settings[field]["size"], 
-                      width=5, command=lambda f=field: self.update_preview(f)).pack(side="left", padx=2)
-            
-            style_frame = tk.Frame(field_frame)
-            style_frame.pack(side="left", padx=5)
-            tk.Label(style_frame, text="Style:").pack(side="left")
-            style_option = ttk.Combobox(style_frame, values=["normal", "bold", "italic", "bold italic"], 
-                                        textvariable=self.font_settings[field]["style"], width=10, state="readonly")
-            style_option.pack(side="left")
+            size_spinbox = tk.Spinbox(size_frame, from_=10, to=200, 
+                                    textvariable=self.font_settings[field]["size"],
+                                    width=4, command=lambda f=field: self.update_preview(f))
+            size_spinbox.pack(side="left")
 
-            # Color button
-            color_btn = tk.Button(field_frame, text="Color", 
+            # Font selection
+            font_frame = tk.Frame(bottom_frame)
+            font_frame.pack(side="left", padx=2)
+            tk.Label(font_frame, text="Font:").pack(side="left")
+            font_option = ttk.Combobox(font_frame, values=list(self.available_fonts.keys()),
+                                     textvariable=self.font_settings[field]["font_name"],
+                                     width=15, state="readonly")
+            font_option.pack(side="left")
+            font_option.bind("<<ComboboxSelected>>", lambda e, f=field: self.update_preview(f))
+
+            # Color button with preview
+            color_frame = tk.Frame(bottom_frame)
+            color_frame.pack(side="right", padx=2)
+            color_preview = tk.Label(color_frame, width=2, height=1, 
+                                   bg=self.font_settings[field]["color"].get())
+            color_preview.pack(side="left")
+            color_btn = tk.Button(color_frame, text="Color", 
                                 command=lambda f=field: self.choose_color(f),
-                                relief="flat", bg="#f0f0f0")
-            color_btn.pack(side="right")
+                                relief="flat", bg="#e0e0e0", padx=2)
+            color_btn.pack(side="left")
 
-            align_frame = tk.Frame(field_frame)
-            align_frame.pack(side="left", padx=5)
+        # Pack the scrollbar and canvas
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
 
-            tk.Label(align_frame, text="Align:").pack(side="left")
-            align_option = ttk.Combobox(align_frame, values=["left", "center", "right"], 
-                                        textvariable=self.font_settings[field]["align"], width=7, state="readonly")
-            align_option.pack(side="left")
-
-            font_btn = tk.Button(field_frame, text="Font", 
-                     command=lambda f=field: self.choose_font(f), relief="flat", bg="#f0f0f0")
-            font_btn.pack(side="right", padx=2)
-
+        # Create placeholders for all fields
+        if self.original_image:
+            for field in self.fields:
+                if self.field_vars[field].get():
+                    self.create_placeholder(field)
 
     def ensure_font_settings_keys(self):
         for field in self.fields:
@@ -522,9 +574,7 @@ class CertificateApp:
             for key, default_value in [
                 ("size", 30),
                 ("color", "#000000"),
-                ("style", "normal"),
-                ("align", "left"),
-                ("font_path", "arial.ttf")
+                ("font_name", list(self.available_fonts.keys())[0] if self.available_fonts else "Default")
             ]:
                 if key not in self.font_settings[field]:
                     if key == "size":
@@ -532,16 +582,36 @@ class CertificateApp:
                     else:
                         self.font_settings[field][key] = tk.StringVar(value=default_value)
 
-    def choose_font(self, field):
-        font_path = filedialog.askopenfilename(filetypes=[("Font files", "*.ttf")])
-        if font_path:
-            self.font_settings[field]["font_path"].set(font_path)
-            messagebox.showinfo("Font Selected", f"Custom font set for '{field}'")
+    def get_font_path(self, font_name):
+        """Get the full path for a font name"""
+        if font_name in self.available_fonts:
+            font_path = self.available_fonts[font_name]
+            if os.path.isabs(font_path):
+                return font_path
+            else:
+                # For default font, try to find it in common locations
+                system_font_dirs = [
+                    "/usr/share/fonts",
+                    "/usr/local/share/fonts",
+                    "C:\\Windows\\Fonts",
+                    os.path.expanduser("~/.fonts")
+                ]
+                
+                for font_dir in system_font_dirs:
+                    full_path = os.path.join(font_dir, font_path)
+                    if os.path.exists(full_path):
+                        return full_path
+                        
+        # Return default font if not found
+        return "arial.ttf"
 
-        # Create new placeholders
-        if self.original_image:
-            for field in self.fields:
-                self.create_placeholder(field)
+    def get_font_with_style(self, font_name, size):
+        """Get the appropriate font"""
+        base_font_path = self.get_font_path(font_name)
+        try:
+            return ImageFont.truetype(base_font_path, size)
+        except:
+            return ImageFont.load_default()
 
     def preview_certificate(self):
         if not self.original_image:
@@ -559,7 +629,6 @@ class CertificateApp:
         img = self.original_image.copy()
         draw = ImageDraw.Draw(img)
         placeholder_positions = self.get_placeholder_positions()
-        font_path = "arial.ttf"
 
         for field in self.fields:
             if self.field_vars[field].get() and field in placeholder_positions:
@@ -567,47 +636,31 @@ class CertificateApp:
                     x, y = placeholder_positions[field]
                     size = self.font_settings[field]["size"].get()
                     color = self.font_settings[field]["color"].get()
-                    try:
-                        font = ImageFont.truetype(font_path, size)
-                    except IOError:
-                        font = ImageFont.load_default()
+                    font_name = self.font_settings[field]["font_name"].get()
                     
-                    style = self.font_settings[field]["style"].get()
-                    font_base_path = self.font_settings[field]["font_path"].get()
+                    # Get font with exact size
+                    font = self.get_font_with_style(font_name, size)
 
-                    # Determine font path based on style if using a custom font set
-                    # Or assume variants are available in the same directory (e.g., arial-bold.ttf)
-                    if style == "bold":
-                        font_path = font_base_path.replace(".ttf", "-bold.ttf")
-                    elif style == "italic":
-                        font_path = font_base_path.replace(".ttf", "-italic.ttf")
-                    elif style == "bold italic":
-                        font_path = font_base_path.replace(".ttf", "-bolditalic.ttf")
-                    else:
-                        font_path = font_base_path
-
-                    # Load font
+                    # Get text and calculate exact width
+                    text = student[field]
+                    text_width = draw.textlength(text, font=font)
+                    
+                    # Calculate exact vertical position
                     try:
-                        font = ImageFont.truetype(font_path, size)
+                        # Get exact text bbox
+                        bbox = font.getbbox(text)
+                        text_height = bbox[3] - bbox[1]
+                        y_offset = (size - text_height) // 2
                     except:
-                        font = ImageFont.load_default()
+                        # Fallback to simple centering
+                        y_offset = 0
 
-                    # Calculate the width of the text to adjust the position
-                    text_width = draw.textlength(student[field], font=font)
-                    align = self.font_settings[field]["align"].get()
-                    if align == "center":
-                        x = x - text_width // 2
-                    elif align == "right":
-                        x = x - text_width
-                    # else: left-aligned (do nothing)
+                    # Center text horizontally and position vertically
+                    x = x - (text_width / 2)  # Center horizontally
+                    y = y - (size / 2) + y_offset  # Center vertically with offset
 
-                    # If it's the first field, center it
-                    # if field == self.fields[0]:
-                    #     x = (img.width - text_width) // 2
-                    # x = x - 1
-
-                    # Apply the text to the image
-                    draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                    # Apply the text to the image with exact positioning
+                    draw.text((x, y), text, font=font, fill=self.hex_to_rgb(color))
                 except Exception as e:
                     print(f"Error drawing text for {field}: {e}")
 
@@ -615,14 +668,20 @@ class CertificateApp:
         preview_win = tk.Toplevel(self.root)
         preview_win.title("Certificate Preview")
 
-        # Resize image for display
-        preview_img = img.resize((900, int(img.height * (900 / img.width))), Image.LANCZOS)
+        # Resize image for display while maintaining aspect ratio
+        preview_width = 900
+        preview_height = int(img.height * (preview_width / img.width))
+        preview_img = img.resize((preview_width, preview_height), Image.LANCZOS)
         preview_photo = ImageTk.PhotoImage(preview_img)
 
         # Label to display the image in the preview window
         label = tk.Label(preview_win, image=preview_photo)
         label.image = preview_photo
         label.pack()
+
+        # Add close button
+        close_btn = tk.Button(preview_win, text="Close", command=preview_win.destroy)
+        close_btn.pack(pady=10)
 
         preview_win.wait_window()
 
@@ -634,6 +693,13 @@ class CertificateApp:
         if not self.original_image:
             messagebox.showwarning("Warning", "No template image loaded!")
             return
+
+        # Ask user for color space
+        color_space = messagebox.askyesno("Color Space", 
+            "Do you want to generate certificates in CMYK color space?\n\n" +
+            "Yes = CMYK\nNo = RGB")
+        
+        self.color_space.set("CMYK" if color_space else "RGB")
     
         output_dir = filedialog.askdirectory(title="Select Output Folder")
         if not output_dir:
@@ -645,8 +711,6 @@ class CertificateApp:
         except:
             print("Error Or folder already exists")
         
-    
-        font_path = "arial.ttf"
         generated_count = 0
     
         # Convert px to mm (1 px = 0.264583 mm)
@@ -675,55 +739,38 @@ class CertificateApp:
                 original_img = self.original_image.copy()
                 draw = ImageDraw.Draw(original_img)
         
-                # Add text fields
+                # Add text fields with exact positioning
                 for field in self.fields:
                     if self.field_vars[field].get() and field in placeholder_positions:
                         try:
                             x, y = placeholder_positions[field]
                             size = self.font_settings[field]["size"].get()
                             color = self.font_settings[field]["color"].get()
-                            try:
-                                font = ImageFont.truetype(font_path, size)
-                            except IOError:
-                                font = ImageFont.load_default()
-
-                            style = self.font_settings[field]["style"].get()
-                            font_base_path = self.font_settings[field]["font_path"].get()
-
-                            # Determine font path based on style if using a custom font set
-                            # Or assume variants are available in the same directory (e.g., arial-bold.ttf)
-                            if style == "bold":
-                                font_path = font_base_path.replace(".ttf", "bold.ttf")
-                            elif style == "italic":
-                                font_path = font_base_path.replace(".ttf", "-italic.ttf")
-                            elif style == "bold italic":
-                                font_path = font_base_path.replace(".ttf", "-bolditalic.ttf")
-                            else:
-                                font_path = font_base_path
-
-                            # Load font
-                            try:
-                                font = ImageFont.truetype(font_path, size)
-                            except:
-                                font = ImageFont.load_default()
-
+                            font_name = self.font_settings[field]["font_name"].get()
                             
-                            # Calculate the width of the text to adjust the position
-                            text_width = draw.textlength(student[field], font=font)
-                            align = self.font_settings[field]["align"].get()
-                            if align == "center":
-                                x = x - text_width // 2
-                            elif align == "right":
-                                x = x - text_width
-                            # else: left-aligned (do nothing)
+                            # Get font with exact size
+                            font = self.get_font_with_style(font_name, size)
 
-                            # If it's the first field, center it
-                            # if field == self.fields[0]:
-                            #     x = (original_img.width - text_width) // 2
-                            # x = x - 1
-    
-                            # Apply the text to the image
-                            draw.text((x, y), student[field], font=font, fill=self.hex_to_rgb(color))
+                            # Get text and calculate exact width
+                            text = student[field]
+                            text_width = draw.textlength(text, font=font)
+                            
+                            # Calculate exact vertical position
+                            try:
+                                # Get exact text bbox
+                                bbox = font.getbbox(text)
+                                text_height = bbox[3] - bbox[1]
+                                y_offset = (size - text_height) // 2
+                            except:
+                                # Fallback to simple centering
+                                y_offset = 0
+
+                            # Center text horizontally and position vertically
+                            x = x - (text_width / 2)  # Center horizontally
+                            y = y - (size / 2) + y_offset  # Center vertically with offset
+
+                            # Apply the text to the image with exact positioning
+                            draw.text((x, y), text, font=font, fill=self.hex_to_rgb(color))
                         except Exception as e:
                             print(f"Error drawing text for {field}: {e}")
     
@@ -733,8 +780,10 @@ class CertificateApp:
                 pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
     
                 # Use the first field as the filename
-                safe_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
-                    
+                temp_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
+                temp_name2 = re.sub(r'[^\w\-_. ]', '', student[self.fields[1]]).strip()
+                safe_name = f"{temp_name}_{temp_name2}"
+
                 if self.color_space.get() == "CMYK":
                     pdf_output_path = os.path.join(f"{output_dir}/CMYK", f"{safe_name}_certificate.pdf")
                 else:
@@ -748,7 +797,6 @@ class CertificateApp:
                 # Update progress after each certificate is generated
                 update_progressbar(i + 1, total_students)
     
-            # messagebox.showinfo("Done", f"{generated_count} certificate(s) generated successfully!")
             self.root.after(0, notify_done)
         # Start the certificate generation in a separate thread
         threading.Thread(target=generate_certificates_in_thread, daemon=True).start()
@@ -771,24 +819,36 @@ class CertificateApp:
             # Get current field settings
             field_settings = {}
             for field in self.fields:
-                self.font_settings[field] = {
+                field_settings[field] = {
                     "size": self.font_settings[field]["size"].get(),
                     "color": self.font_settings[field]["color"].get(),
                     "visible": self.field_vars[field].get(),
-                    "align": self.font_settings[field]["align"].get(),
-                    "style": self.font_settings[field]["style"].get(),
-                    "font_path": self.font_settings[field]["font_path"].get()
+                    "font_name": self.font_settings[field]["font_name"].get()
                 }
+
+            # Get current positions
+            positions = self.get_placeholder_positions()
 
             project_data = {
                 "template_path": self.template_path,
-                "positions": self.get_placeholder_positions(),
+                "positions": positions,
                 "field_settings": field_settings,
                 "excel_path": self.excel_path if hasattr(self, 'excel_path') else None,
-                "color_space": self.color_space.get()  # Save color space
+                "color_space": self.color_space.get(),
+                "version": "1.0",  # Add version for future compatibility
+                "last_modified": datetime.now().isoformat(),
+                "canvas_size": {
+                    "width": self.canvas.winfo_width(),
+                    "height": self.canvas.winfo_height()
+                }
             }
     
-            file_path = filedialog.asksaveasfilename(defaultextension=".certproj", filetypes=[("Certificate Project", "*.certproj")])
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".certproj",
+                filetypes=[("Certificate Project", "*.certproj")],
+                initialfile="certificate_project.certproj"
+            )
+            
             if file_path:
                 with open(file_path, "w") as f:
                     json.dump(project_data, f, indent=4)
@@ -798,7 +858,10 @@ class CertificateApp:
     
     def load_project(self):
         try:
-            file_path = filedialog.askopenfilename(filetypes=[("Certificate Project", "*.certproj")])
+            file_path = filedialog.askopenfilename(
+                filetypes=[("Certificate Project", "*.certproj")],
+                initialfile="certificate_project.certproj"
+            )
             if not file_path:
                 return
 
@@ -808,6 +871,8 @@ class CertificateApp:
             # Clear existing UI elements
             self.canvas.delete("all")
             self.placeholders.clear()
+            if hasattr(self, '_placeholder_images'):
+                self._placeholder_images.clear()
 
             # Load template first
             if project_data.get("template_path") and os.path.exists(project_data["template_path"]):
@@ -846,10 +911,7 @@ class CertificateApp:
                         self.font_settings[field]["size"].set(settings.get("size", 30))
                         self.font_settings[field]["color"].set(settings.get("color", "#000000"))
                         self.field_vars[field].set(settings.get("visible", True))
-                        self.font_settings[field]["align"].set(settings.get("align", "left"))
-                        self.font_settings[field]["style"].set(settings.get("style", "normal"))
-                        self.font_settings[field]["font_path"].set(settings.get("font_path", "arial.ttf"))
-
+                        self.font_settings[field]["font_name"].set(settings.get("font_name", "Arial"))
 
                 # Create placeholders with saved positions
                 positions = project_data["positions"]
@@ -861,6 +923,8 @@ class CertificateApp:
                         scaled_y = y / self.scale_y
                         # Create placeholder with is_update=True to prevent centering
                         self.create_placeholder(field, scaled_x, scaled_y, is_update=True)
+
+            messagebox.showinfo("Success", "Project loaded successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load project: {e}")
 
@@ -869,25 +933,88 @@ class CertificateApp:
             size = self.font_settings[field]["size"].get()
             color = self.font_settings[field]["color"].get()
             
-            sample_value = self.excel_data[0][field] if self.excel_data else field
+            # Get the actual value from excel data if available
+            if self.excel_data and len(self.excel_data) > 0:
+                sample_value = self.excel_data[0][field]
+                if not sample_value:  # If the value is empty, use the field name
+                    sample_value = field
+            else:
+                sample_value = field
             
-            font_path = "arial.ttf"
+            font_name = self.font_settings[field]["font_name"].get()
             try:
-                scaled_font_size = max(10, int(size / self.scale_y))
-                font = ImageFont.truetype(font_path, scaled_font_size)
-            except IOError:
+                # Use the actual font size for rendering
+                font = self.get_font_with_style(font_name, size)
+            except:
                 font = ImageFont.load_default()
             
-            img = Image.new("RGBA", (500, 100), (255, 255, 255, 0))
-            draw = ImageDraw.Draw(img)
-            draw.text((0, 0), sample_value, font=font, fill=self.hex_to_rgb(color))
-            bbox = img.getbbox()
-            cropped_img = img.crop(bbox)
+            # Create a temporary image to measure text
+            temp_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(temp_img)
+            text_width = draw.textlength(sample_value, font=font)
             
-            return ImageTk.PhotoImage(cropped_img)
+            # Get exact text height using font metrics
+            try:
+                # Try to get exact font metrics if available
+                ascent, descent = font.getmetrics()
+                text_height = ascent + descent
+            except:
+                # Fallback to font size if metrics not available
+                text_height = size
+            
+            # Create the actual placeholder image with exact text size
+            img = Image.new("RGBA", (int(text_width), int(text_height)), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+            
+            # Calculate vertical position to center text exactly
+            try:
+                # Get exact text bbox
+                bbox = font.getbbox(sample_value)
+                y_offset = (text_height - (bbox[3] - bbox[1])) // 2
+            except:
+                # Fallback to simple centering if bbox not available
+                y_offset = (text_height - size) // 2
+            
+            # Draw text with exact positioning
+            draw.text((0, y_offset), sample_value, font=font, fill=self.hex_to_rgb(color))
+            
+            # Scale the image for display using exact scaling factors
+            scaled_width = int(text_width / self.scale_x)
+            scaled_height = int(text_height / self.scale_y)
+            scaled_img = img.resize((scaled_width, scaled_height), Image.LANCZOS)
+            
+            return ImageTk.PhotoImage(scaled_img)
         except Exception as e:
-            print(f"Error rendering placeholder: {e}")
+            print(f"Error rendering placeholder for {field}: {e}")
             return None
+
+    def load_available_fonts(self):
+        """Load all available fonts from the fonts directory"""
+        fonts = {}
+        fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+        
+        # Create fonts directory if it doesn't exist
+        if not os.path.exists(fonts_dir):
+            os.makedirs(fonts_dir)
+            messagebox.showinfo("Fonts Directory", "A 'fonts' directory has been created. Please add your .ttf or .otf font files there.")
+            
+        # Load custom fonts from fonts directory
+        for file in os.listdir(fonts_dir):
+            if file.lower().endswith(('.ttf', '.otf')):
+                font_name = os.path.splitext(file)[0]
+                fonts[font_name] = os.path.join(fonts_dir, file)
+                
+        if not fonts:
+            messagebox.showwarning("No Fonts Found", "No fonts found in the 'fonts' directory. Please add .ttf or .otf files.")
+            # Add a default font
+            fonts["Default"] = "arial.ttf"
+            
+        return fonts
+
+    def update_status(self, message):
+        """Update the status bar with a message"""
+        self.status_bar.config(text=message)
+        self.master.update_idletasks()
 
 
 
