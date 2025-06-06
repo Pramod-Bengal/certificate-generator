@@ -24,6 +24,10 @@ class CertificateApp:
         self.root.title("Certificate Generator")
         self.set_icon()  # Set the icon after initializing the window
 
+        # Add image cache
+        self.image_cache = {}
+        self.font_cache = {}
+        
         self.original_image = None
         self.display_image = None
         self.scale_x = 1
@@ -132,15 +136,17 @@ class CertificateApp:
     def set_icon(self):
         """Set the application icon based on the operating system."""
         try:
+            # Get the correct directory whether running as script or exe
             if getattr(sys, 'frozen', False):
-                # Running as a bundle (PyInstaller)
-                base_path = sys._MEIPASS
+                # Running as compiled exe
+                base_path = os.path.dirname(sys.executable)
             else:
-                # Running as a script
+                # Running as script
                 base_path = os.path.dirname(os.path.abspath(__file__))
             
             # Try different icon formats
             icon_paths = [
+                os.path.join(base_path, 'certgen.ico'),
                 os.path.join(base_path, 'icon.ico'),
                 os.path.join(base_path, 'logo.png'),
                 os.path.join(base_path, 'icon.png')
@@ -583,16 +589,18 @@ class CertificateApp:
             if os.path.isabs(font_path):
                 return font_path
             else:
-                # For default font, try to find it in common locations
-                system_font_dirs = [
-                    "/usr/share/fonts",
-                    "/usr/local/share/fonts",
-                    "C:\\Windows\\Fonts",
-                    os.path.expanduser("~/.fonts")
-                ]
+                # For bundled fonts, try to find them in the executable directory
+                if getattr(sys, 'frozen', False):
+                    # Check both executable directory and _MEIPASS
+                    base_paths = [os.path.dirname(sys.executable)]
+                    if hasattr(sys, '_MEIPASS'):
+                        base_paths.append(sys._MEIPASS)
+                else:
+                    base_paths = [os.path.dirname(os.path.abspath(__file__))]
                 
-                for font_dir in system_font_dirs:
-                    full_path = os.path.join(font_dir, font_path)
+                for base_path in base_paths:
+                    fonts_dir = os.path.join(base_path, "fonts")
+                    full_path = os.path.join(fonts_dir, font_path)
                     if os.path.exists(full_path):
                         return full_path
                         
@@ -600,10 +608,16 @@ class CertificateApp:
         return "arial.ttf"
 
     def get_font_with_style(self, font_name, size):
-        """Get the appropriate font"""
+        """Get the appropriate font with caching"""
+        cache_key = f"{font_name}_{size}"
+        if cache_key in self.font_cache:
+            return self.font_cache[cache_key]
+            
         base_font_path = self.get_font_path(font_name)
         try:
-            return ImageFont.truetype(base_font_path, size)
+            font = ImageFont.truetype(base_font_path, size)
+            self.font_cache[cache_key] = font
+            return font
         except:
             return ImageFont.load_default()
 
@@ -725,6 +739,14 @@ class CertificateApp:
             nonlocal generated_count
             total_students = len(self.excel_data)
             placeholder_positions = self.get_placeholder_positions()
+            
+            # Pre-calculate fonts and positions
+            font_cache = {}
+            for field in self.fields:
+                if self.field_vars[field].get() and field in placeholder_positions:
+                    size = self.font_settings[field]["size"].get()
+                    font_name = self.font_settings[field]["font_name"].get()
+                    font_cache[field] = self.get_font_with_style(font_name, size)
     
             for i, student in enumerate(self.excel_data):
                 pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
@@ -740,10 +762,9 @@ class CertificateApp:
                             x, y = placeholder_positions[field]
                             size = self.font_settings[field]["size"].get()
                             color = self.font_settings[field]["color"].get()
-                            font_name = self.font_settings[field]["font_name"].get()
                             
-                            # Get font with exact size
-                            font = self.get_font_with_style(font_name, size)
+                            # Use cached font
+                            font = font_cache[field]
 
                             # Get text and calculate exact width
                             text = student[field]
@@ -751,12 +772,10 @@ class CertificateApp:
                             
                             # Calculate exact vertical position
                             try:
-                                # Get exact text bbox
                                 bbox = font.getbbox(text)
                                 text_height = bbox[3] - bbox[1]
                                 y_offset = (size - text_height) // 2
                             except:
-                                # Fallback to simple centering
                                 y_offset = 0
 
                             # Center text horizontally and position vertically
@@ -769,7 +788,7 @@ class CertificateApp:
                             print(f"Error drawing text for {field}: {e}")
     
                 temp_img_path = "temp_certificate.png"
-                original_img.save(temp_img_path)
+                original_img.save(temp_img_path, optimize=True)  # Add optimization
     
                 pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
     
@@ -924,6 +943,13 @@ class CertificateApp:
 
     def render_placeholder(self, field):
         try:
+            # Create cache key
+            cache_key = f"{field}_{self.font_settings[field]['size'].get()}_{self.font_settings[field]['color'].get()}_{self.font_settings[field]['font_name'].get()}"
+            
+            # Check cache first
+            if cache_key in self.image_cache:
+                return self.image_cache[cache_key]
+
             size = self.font_settings[field]["size"].get()
             color = self.font_settings[field]["color"].get()
             
@@ -936,11 +962,7 @@ class CertificateApp:
                 sample_value = field
             
             font_name = self.font_settings[field]["font_name"].get()
-            try:
-                # Use the actual font size for rendering
-                font = self.get_font_with_style(font_name, size)
-            except:
-                font = ImageFont.load_default()
+            font = self.get_font_with_style(font_name, size)
             
             # Create a temporary image to measure text
             temp_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
@@ -949,11 +971,9 @@ class CertificateApp:
             
             # Get exact text height using font metrics
             try:
-                # Try to get exact font metrics if available
                 ascent, descent = font.getmetrics()
                 text_height = ascent + descent
             except:
-                # Fallback to font size if metrics not available
                 text_height = size
             
             # Create the actual placeholder image with exact text size
@@ -962,11 +982,9 @@ class CertificateApp:
             
             # Calculate vertical position to center text exactly
             try:
-                # Get exact text bbox
                 bbox = font.getbbox(sample_value)
                 y_offset = (text_height - (bbox[3] - bbox[1])) // 2
             except:
-                # Fallback to simple centering if bbox not available
                 y_offset = (text_height - size) // 2
             
             # Draw text with exact positioning
@@ -977,7 +995,10 @@ class CertificateApp:
             scaled_height = int(text_height / self.scale_y)
             scaled_img = img.resize((scaled_width, scaled_height), Image.LANCZOS)
             
-            return ImageTk.PhotoImage(scaled_img)
+            # Cache the result
+            result = ImageTk.PhotoImage(scaled_img)
+            self.image_cache[cache_key] = result
+            return result
         except Exception as e:
             print(f"Error rendering placeholder for {field}: {e}")
             return None
@@ -985,21 +1006,46 @@ class CertificateApp:
     def load_available_fonts(self):
         """Load all available fonts from the fonts directory"""
         fonts = {}
-        fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+        
+        # Get the correct directory whether running as script or exe
+        if getattr(sys, 'frozen', False):
+            # Running as compiled exe
+            base_path = os.path.dirname(sys.executable)
+            # For PyInstaller, also check the _MEIPASS directory
+            if hasattr(sys, '_MEIPASS'):
+                meipass_path = sys._MEIPASS
+                fonts_dir = os.path.join(meipass_path, "fonts")
+                if os.path.exists(fonts_dir):
+                    for file in os.listdir(fonts_dir):
+                        if file.lower().endswith(('.ttf', '.otf')):
+                            font_name = os.path.splitext(file)[0]
+                            fonts[font_name] = os.path.join(fonts_dir, file)
+        else:
+            # Running as script
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            
+        # Look for fonts in the fonts subdirectory
+        fonts_dir = os.path.join(base_path, "fonts")
         
         # Create fonts directory if it doesn't exist
         if not os.path.exists(fonts_dir):
-            os.makedirs(fonts_dir)
-            messagebox.showinfo("Fonts Directory", "A 'fonts' directory has been created. Please add your .ttf or .otf font files there.")
+            try:
+                os.makedirs(fonts_dir)
+                messagebox.showinfo("Fonts Directory", 
+                    "A 'fonts' directory has been created. Please add your .ttf or .otf font files there.")
+            except Exception as e:
+                print(f"Error creating fonts directory: {e}")
             
-        # Load custom fonts from fonts directory
-        for file in os.listdir(fonts_dir):
-            if file.lower().endswith(('.ttf', '.otf')):
-                font_name = os.path.splitext(file)[0]
-                fonts[font_name] = os.path.join(fonts_dir, file)
+        # Load fonts from the fonts directory
+        if os.path.exists(fonts_dir):
+            for file in os.listdir(fonts_dir):
+                if file.lower().endswith(('.ttf', '.otf')):
+                    font_name = os.path.splitext(file)[0]
+                    fonts[font_name] = os.path.join(fonts_dir, file)
                 
         if not fonts:
-            messagebox.showwarning("No Fonts Found", "No fonts found in the 'fonts' directory. Please add .ttf or .otf files.")
+            messagebox.showwarning("No Fonts Found", 
+                "No fonts found in the 'fonts' directory. Please add .ttf or .otf files.")
             # Add a default font
             fonts["Default"] = "arial.ttf"
             
