@@ -1,8 +1,11 @@
-# Certificate Generator
+# CertGen
+
+##### (Certificate Generator)
 
 #### Free and Open Source
 
 **Bulk Certificate Creator** – Easily generate professional certificates from Excel data. This user-friendly tool lets you design, customize, and export certificates in minutes.
+With Support for both Windows & Linux
 
 ## 🚀 Key Features
 
@@ -41,7 +44,7 @@
 git clone https://github.com/yourusername/certificate-generator.git
 cd certificate-generator
 pip install -r requirements.txt
-python3 script.py
+python3 certgen.py
 ```
 
 ### Requirements
@@ -73,7 +76,6 @@ python3 script.py
 - Template library
 - Export to more formats
 - Advanced field validation
-- macOS & Linux support
 
 ---
 
@@ -92,5 +94,3 @@ Need help? [Open an issue](https://github.com/yourusername/certificate-generator
 ---
 
 **Keywords**: bulk certificate generator, Excel to certificate, certificate automation, customizable certificate creator, batch certificate PDF tool
-
-Let me know if you'd like a version for a website landing page or app store listing!
