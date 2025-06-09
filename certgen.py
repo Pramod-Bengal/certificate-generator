@@ -667,52 +667,82 @@ class CertificateApp:
                     color = self.font_settings[field]["color"].get()
                     font_name = self.font_settings[field]["font_name"].get()
                     
-                    # Get font with exact size
                     font = self.get_font_with_style(font_name, size)
-
-                    # Get text and calculate exact width
                     text = student[field]
                     text_width = draw.textlength(text, font=font)
                     
-                    # Calculate exact vertical position
                     try:
-                        # Get exact text bbox
                         bbox = font.getbbox(text)
                         text_height = bbox[3] - bbox[1]
                         y_offset = (size - text_height) // 2
                     except:
-                        # Fallback to simple centering
                         y_offset = 0
 
-                    # Center text horizontally and position vertically
-                    x = x - (text_width / 2)  # Center horizontally
-                    y = y - (size / 2) + y_offset  # Center vertically with offset
+                    x = x - (text_width / 2)
+                    y = y - (size / 2) + y_offset
 
-                    # Apply the text to the image with exact positioning
                     draw.text((x, y), text, font=font, fill=self.hex_to_rgb(color))
                 except Exception as e:
                     print(f"Error drawing text for {field}: {e}")
 
-        # Show preview in a new window
+        # Create preview window as child of main window
         preview_win = tk.Toplevel(self.root)
-        preview_win.title("Certificate Preview")
-
+        preview_win.title("CertWizard - Certificate Preview")
+        preview_win.transient(self.root)  # Make it a child window
+        preview_win.grab_set()  # Make it modal
+        
+        # Set window icon
+        if hasattr(self.root, 'iconbitmap'):
+            preview_win.iconbitmap(self.root.iconbitmap())
+        
+        # Calculate preview window size (80% of main window)
+        main_width = self.root.winfo_width()
+        main_height = self.root.winfo_height()
+        preview_width = int(main_width * 0.8)
+        preview_height = int(main_height * 0.8)
+        
+        # Calculate position to center the preview window
+        x = self.root.winfo_x() + (main_width - preview_width) // 2
+        y = self.root.winfo_y() + (main_height - preview_height) // 2
+        
+        # Set preview window size and position
+        preview_win.geometry(f"{preview_width}x{preview_height}+{x}+{y}")
+        
+        # Create a frame for the preview
+        preview_frame = tk.Frame(preview_win, bg="white")
+        preview_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
         # Resize image for display while maintaining aspect ratio
-        preview_width = 900
-        preview_height = int(img.height * (preview_width / img.width))
-        preview_img = img.resize((preview_width, preview_height), Image.LANCZOS)
+        img_width, img_height = img.size
+        ratio = min(preview_width / img_width, preview_height / img_height)
+        new_size = (int(img_width * ratio), int(img_height * ratio))
+        preview_img = img.resize(new_size, Image.LANCZOS)
         preview_photo = ImageTk.PhotoImage(preview_img)
 
-        # Label to display the image in the preview window
-        label = tk.Label(preview_win, image=preview_photo)
+        # Label to display the image
+        label = tk.Label(preview_frame, image=preview_photo, bg="white")
         label.image = preview_photo
-        label.pack()
+        label.pack(fill="both", expand=True)
 
-        # Add close button
-        close_btn = tk.Button(preview_win, text="Close", command=preview_win.destroy)
+        # Add close button with modern styling
+        close_btn = tk.Button(preview_win, text="Close", command=preview_win.destroy,
+                            bg="#3498db", fg="white", relief="flat", padx=20, pady=5,
+                            font=("Arial", 10, "bold"), activebackground="#2980b9")
         close_btn.pack(pady=10)
-
-        preview_win.wait_window()
+        
+        # Bind escape key to close
+        preview_win.bind('<Escape>', lambda e: preview_win.destroy())
+        
+        # Make preview window resizable
+        preview_win.resizable(True, True)
+        
+        # Set minimum size
+        preview_win.minsize(400, 300)
+        
+        # Center the window
+        preview_win.update_idletasks()
+        preview_win.lift()
+        preview_win.focus_set()
 
     def generate_certificates(self):
         if not self.excel_data:
@@ -1039,7 +1069,7 @@ class CertificateApp:
                 meipass_path = sys._MEIPASS
                 fonts_dir = os.path.join(meipass_path, "fonts")
                 if os.path.exists(fonts_dir):
-                    for file in os.listdir(fonts_dir):
+                    for file in sorted(os.listdir(fonts_dir)):
                         if file.lower().endswith(('.ttf', '.otf')):
                             font_name = os.path.splitext(file)[0]
                             fonts[font_name] = os.path.join(fonts_dir, file)
@@ -1061,7 +1091,7 @@ class CertificateApp:
             
         # Load fonts from the fonts directory
         if os.path.exists(fonts_dir):
-            for file in os.listdir(fonts_dir):
+            for file in sorted(os.listdir(fonts_dir)):
                 if file.lower().endswith(('.ttf', '.otf')):
                     font_name = os.path.splitext(file)[0]
                     fonts[font_name] = os.path.join(fonts_dir, file)
@@ -1071,8 +1101,10 @@ class CertificateApp:
                 "No fonts found in the 'fonts' directory. Please add .ttf or .otf files.")
             # Add a default font
             fonts["Default"] = "arial.ttf"
-            
-        return fonts
+        
+        # Sort the fonts dictionary by keys (font names)
+        sorted_fonts = dict(sorted(fonts.items(), key=lambda x: x[0].lower()))
+        return sorted_fonts
 
     def update_status(self, message):
         """Update the status bar with a message"""
