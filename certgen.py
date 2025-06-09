@@ -18,135 +18,163 @@ import colorsys
 class CertificateApp:
     
     def __init__(self, root):
-
-        self.master = root
         self.root = root
-        self.root.title("Certificate Generator")
-        self.set_icon()  # Set the icon after initializing the window
+        self.root.title("CertWizard - Professional Certificate Generator")
+        # Set taskbar title
+        if platform.system() == 'Windows':
+            self.root.wm_attributes('-toolwindow', True)  # Remove from taskbar
+            self.root.wm_attributes('-toolwindow', False)  # Add back with proper title
+        self.set_icon()
 
         self.original_image = None
         self.display_image = None
-        self.scale_x = 1
-        self.scale_y = 1
-        self.template_path = None  # Add template_path attribute
-        self.excel_path = None  # Add excel_path attribute
-
-        self.placeholders = {}  # Store placeholder references
-
-        self.excel_data = []  # Will store list of student dictionaries
-        self.fields = []  # List to store dynamic fields
-        self.field_vars = {}  # Dictionary to store field toggle variables
-        self.font_settings = {}  # Dictionary to store font settings for each field
-        self.selected_field = tk.StringVar()  # For dropdown
+        self.scale_x = self.scale_y = 1
+        self.template_path = self.excel_path = None
+        self.placeholders = {}
+        self.excel_data = []
+        self.fields = []
+        self.field_vars = {}
+        self.font_settings = {}
+        self.selected_field = tk.StringVar()
+        self.color_space = tk.StringVar(value="RGB")
 
         self.include_name = tk.BooleanVar(value=True)
         self.include_id = tk.BooleanVar(value=True)
         self.include_start = tk.BooleanVar(value=True)
         self.include_end = tk.BooleanVar(value=True)
 
-        # Add color space selection
-        self.color_space = tk.StringVar(value="RGB")  # Default to RGB
-
-        # Load available fonts
+        # Load fonts and setup UI
         self.available_fonts = self.load_available_fonts()
         
         self.setup_ui()
         
     def setup_ui(self):
-        self.master.title("Certificate Generator")
-        self.master.configure(padx=15, pady=15, bg="#f5f5f5")  # Lighter background
-
-        # ---- Top Navigation Bar ----
-        nav_frame = tk.Frame(self.master, bg="#ffffff", height=45)  # Taller nav bar
+        """Setup the main UI components"""
+        self.root.configure(padx=15, pady=15, bg="#f0f2f5")  # Modern light blue-gray background
+        
+        # Navigation bar with gradient effect
+        nav_frame = tk.Frame(self.root, bg="#2c3e50", height=50)  # Dark blue-gray
         nav_frame.pack(fill="x", pady=(0, 10))
         
-        # File Operations
-        file_menu = tk.Menubutton(nav_frame, text="Project", bg="#ffffff", relief="flat", 
-                                 font=("Arial", 10, "bold"), padx=10)
+        # Logo/Title
+        title_label = tk.Label(nav_frame, text="CertWizard", font=("Arial", 16, "bold"),
+                             fg="white", bg="#2c3e50", padx=15)
+        title_label.pack(side="left")
+        
+        # File menu with modern styling
+        file_menu = tk.Menubutton(nav_frame, text="Project", bg="#2c3e50", fg="white",
+                                 relief="flat", font=("Arial", 10), padx=10)
         file_menu.pack(side="left", padx=5)
-        file_menu.menu = tk.Menu(file_menu, tearoff=0)
+        file_menu.menu = tk.Menu(file_menu, tearoff=0, bg="#ffffff", fg="#2c3e50",
+                               activebackground="#3498db", activeforeground="white")
         file_menu["menu"] = file_menu.menu
         file_menu.menu.add_command(label="Save Project", command=self.save_project)
         file_menu.menu.add_command(label="Load Project", command=self.load_project)
 
-        # Load buttons with better styling
-        load_template_btn = tk.Button(nav_frame, text="Load Template", command=self.load_template, 
-                                    fg="black", bg="#e8e8e8", relief="flat", padx=12, pady=5,
-                                    font=("Arial", 9))
-        load_template_btn.pack(side="left", padx=5)
+        # Load buttons with modern styling
+        for text, cmd in [("Load Template", self.load_template), ("Load Excel", self.load_excel)]:
+            tk.Button(nav_frame, text=text, command=cmd, fg="white", bg="#3498db",
+                     relief="flat", padx=12, pady=5, font=("Arial", 9),
+                     activebackground="#2980b9").pack(side="left", padx=5)
 
-        load_excel_btn = tk.Button(nav_frame, text="Load Excel", command=self.load_excel, 
-                                 fg="black", bg="#e8e8e8", relief="flat", padx=12, pady=5,
-                                 font=("Arial", 9))
-        load_excel_btn.pack(side="left", padx=5)
-
-        # Add status bar with better styling
-        self.status_bar = tk.Label(self.master, text="Ready", bd=1, relief=tk.SUNKEN, 
-                                 anchor=tk.W, bg="#ffffff", padx=10, pady=5)
+        # Status bar with modern styling
+        self.status_bar = tk.Label(self.root, text="Ready", bd=0, relief=tk.FLAT,
+                                 anchor=tk.W, bg="#2c3e50", fg="white", padx=10, pady=5)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
-        # ---- Main Content Area ----
-        main_frame = tk.Frame(self.master, bg="#f5f5f5")
+        # Main content area
+        main_frame = tk.Frame(self.root, bg="#f0f2f5")
         main_frame.pack(fill="both", expand=True)
 
-        # ---- Left Panel (Settings) ----
-        settings_frame = tk.Frame(main_frame, width=250, bg="#ffffff", padx=10, pady=10)
+        # Settings panel with modern styling
+        settings_frame = tk.Frame(main_frame, width=280, bg="white", padx=15, pady=15)
         settings_frame.pack(side="left", fill="y", padx=(0, 15))
 
-        # ---- Field Toggles ----
-        self.toggle_frame = tk.LabelFrame(settings_frame, text="Fields", padx=10, pady=10,
-                                        font=("Arial", 10, "bold"), bg="#ffffff")
+        # Field toggles with modern styling
+        self.toggle_frame = tk.LabelFrame(settings_frame, text="Certificate Fields",
+                                        padx=10, pady=10, font=("Arial", 11, "bold"),
+                                        bg="white", fg="#2c3e50")
         self.toggle_frame.pack(fill="x", pady=(0, 10))
 
-        # ---- Action buttons ----
-        action_frame = tk.Frame(settings_frame, bg="#ffffff")
+        # Action buttons with modern styling
+        action_frame = tk.Frame(settings_frame, bg="white")
         action_frame.pack(fill="x", pady=(10, 5))
 
-        preview_btn = tk.Button(action_frame, text="Preview", command=self.preview_certificate, 
-                              bg="#4CAF50", fg="white", relief="flat", padx=15, pady=8,
-                              font=("Arial", 10, "bold"))
-        preview_btn.pack(side="left", padx=2, fill="x", expand=True)
+        for text, cmd, color in [("Preview", self.preview_certificate, "#27ae60"),
+                               ("Generate", self.generate_certificates, "#3498db")]:
+            tk.Button(action_frame, text=text, command=cmd, bg=color, fg="white",
+                     relief="flat", padx=15, pady=8, font=("Arial", 10, "bold"),
+                     activebackground="#219a52" if color == "#27ae60" else "#2980b9"
+                     ).pack(side="left" if text == "Preview" else "right", padx=2, fill="x", expand=True)
 
-        generate_btn = tk.Button(action_frame, text="Generate", command=self.generate_certificates,
-                               bg="#2196F3", fg="white", relief="flat", padx=15, pady=8,
-                               font=("Arial", 10, "bold"))
-        generate_btn.pack(side="right", padx=2, fill="x", expand=True)
+        # Progress bar with modern styling
+        style = ttk.Style()
+        style.configure("Modern.Horizontal.TProgressbar",
+                       troughcolor="#f0f2f5",
+                       background="#3498db",
+                       thickness=10)
+        self.progress = ttk.Progressbar(settings_frame, orient="horizontal", length=200,
+                                      mode="determinate", style="Modern.Horizontal.TProgressbar")
+        self.progress.pack(fill="x", pady=(10, 0))
 
-        # ---- Progress Bar ----
-        progress_frame = tk.Frame(settings_frame, bg="#ffffff")
-        progress_frame.pack(fill="x", pady=(10, 0))
-        self.progress = ttk.Progressbar(progress_frame, orient="horizontal", length=200, 
-                                      mode="determinate", style="Horizontal.TProgressbar")
-        self.progress.pack(fill="x", pady=(5, 0))
+        # Information text box
+        info_frame = tk.LabelFrame(settings_frame, text="Generation Status",
+                                 padx=10, pady=10, font=("Arial", 11, "bold"),
+                                 bg="white", fg="#2c3e50")
+        info_frame.pack(fill="x", pady=(10, 0))
 
-        # ---- Center Canvas Area ----
-        center_panel = tk.Frame(main_frame, bg="#f5f5f5")
-        center_panel.pack(side="left", fill="both", expand=True)
+        # Create a text widget with scrollbar
+        self.info_text = tk.Text(info_frame, height=8, width=30, wrap=tk.WORD,
+                               font=("Arial", 9), bg="#f8f9fa", fg="#2c3e50",
+                               relief=tk.FLAT, padx=5, pady=5)
+        self.info_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(info_frame, orient="vertical", command=self.info_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.info_text.configure(yscrollcommand=scrollbar.set)
+        
+        # Make text read-only
+        self.info_text.configure(state='disabled')
 
-        self.canvas_frame = tk.Frame(center_panel, relief="solid", borderwidth=1, bg="#ffffff")
-        self.canvas_frame.pack(fill="both", expand=True, padx=5, pady=5)
-
-        self.canvas = tk.Canvas(self.canvas_frame, bg="white")
+        # Canvas area with modern styling
+        self.canvas_frame = tk.Frame(main_frame, relief="solid", borderwidth=1,
+                                   bg="white", highlightbackground="#bdc3c7")
+        self.canvas_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+        self.canvas = tk.Canvas(self.canvas_frame, bg="white", highlightthickness=0)
         self.canvas.pack(fill="both", expand=True, padx=2, pady=2)
 
     def set_icon(self):
-        """Set the application icon based on the operating system."""
+        """Set the application icon"""
         try:
-            # Get the correct directory whether running as script or exe
-            if getattr(sys, 'frozen', False):
-                # Running as compiled exe
-                base_path = os.path.dirname(sys.executable)
-            else:
-                # Running as script
-                base_path = os.path.dirname(os.path.abspath(__file__))
+            base_path = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) 
+                                      else os.path.abspath(__file__))
             
-            # Try different icon formats
+            # Try different icon formats and locations
             icon_paths = [
                 os.path.join(base_path, 'certgen.ico'),
                 os.path.join(base_path, 'icon.ico'),
                 os.path.join(base_path, 'logo.png'),
-                os.path.join(base_path, 'icon.png')
+                os.path.join(base_path, 'icon.png'),
+                os.path.join(base_path, 'assets', 'certgen.ico'),
+                os.path.join(base_path, 'assets', 'icon.ico'),
+                os.path.join(base_path, 'assets', 'logo.png'),
+                os.path.join(base_path, 'assets', 'icon.png')
             ]
+            
+            # For PyInstaller, also check the _MEIPASS directory
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                meipass_path = sys._MEIPASS
+                icon_paths.extend([
+                    os.path.join(meipass_path, 'certgen.ico'),
+                    os.path.join(meipass_path, 'icon.ico'),
+                    os.path.join(meipass_path, 'logo.png'),
+                    os.path.join(meipass_path, 'icon.png'),
+                    os.path.join(meipass_path, 'assets', 'certgen.ico'),
+                    os.path.join(meipass_path, 'assets', 'icon.ico'),
+                    os.path.join(meipass_path, 'assets', 'logo.png'),
+                    os.path.join(meipass_path, 'assets', 'icon.png')
+                ])
             
             icon_set = False
             for icon_path in icon_paths:
@@ -154,16 +182,14 @@ class CertificateApp:
                     try:
                         if platform.system() == 'Windows':
                             self.root.iconbitmap(icon_path)
+                            # Also set the taskbar icon
+                            self.root.wm_iconbitmap(icon_path)
                             icon_set = True
                             break
-                        elif platform.system() == 'Linux':
+                        elif platform.system() in ['Linux', 'Darwin']:
                             img = Image.open(icon_path)
                             photo = ImageTk.PhotoImage(img)
-                            self.root.tk.call('wm', 'iconphoto', self.root._w, photo)
-                            icon_set = True
-                            break
-                        elif platform.system() == 'Darwin':  # macOS
-                            self.root.iconbitmap(icon_path)
+                            self.root.iconphoto(True, photo)  # True makes it the default for all windows
                             icon_set = True
                             break
                     except Exception as e:
@@ -584,51 +610,45 @@ class CertificateApp:
             font_path = self.available_fonts[font_name]
             if os.path.isabs(font_path):
                 return font_path
-            else:
-                # For default font, try to find it in common locations
-                system_font_dirs = [
-                    "/usr/share/fonts",
-                    "/usr/local/share/fonts",
-                    "C:\\Windows\\Fonts",
-                    os.path.expanduser("~/.fonts")
-                ]
-                
-                # Add the fonts directory to search paths
-                if getattr(sys, 'frozen', False):
-                    # Check both executable directory and _MEIPASS
-                    base_paths = [os.path.dirname(sys.executable)]
-                    if hasattr(sys, '_MEIPASS'):
-                        base_paths.append(sys._MEIPASS)
-                else:
-                    base_paths = [os.path.dirname(os.path.abspath(__file__))]
-                
-                for base_path in base_paths:
-                    fonts_dir = os.path.join(base_path, "fonts")
-                    system_font_dirs.insert(0, fonts_dir)
-                
-                for font_dir in system_font_dirs:
-                    full_path = os.path.join(font_dir, font_path)
-                    if os.path.exists(full_path):
-                        return full_path
-                        
-        # Return default font if not found
+            
+            # Search in common locations
+            search_paths = [
+                "/usr/share/fonts",
+                "/usr/local/share/fonts",
+                "C:\\Windows\\Fonts",
+                os.path.expanduser("~/.fonts")
+            ]
+            
+            # Add fonts directory to search paths
+            base_paths = [os.path.dirname(sys.executable if getattr(sys, 'frozen', False) 
+                                        else os.path.abspath(__file__))]
+            if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+                base_paths.append(sys._MEIPASS)
+            
+            for base_path in base_paths:
+                search_paths.insert(0, os.path.join(base_path, "fonts"))
+            
+            for font_dir in search_paths:
+                full_path = os.path.join(font_dir, font_path)
+                if os.path.exists(full_path):
+                    return full_path
+                    
         return "arial.ttf"
 
     def get_font_with_style(self, font_name, size):
         """Get the appropriate font"""
-        base_font_path = self.get_font_path(font_name)
         try:
-            return ImageFont.truetype(base_font_path, size)
+            return ImageFont.truetype(self.get_font_path(font_name), size)
         except:
             return ImageFont.load_default()
 
     def preview_certificate(self):
         if not self.original_image:
-            messagebox.showwarning("Warning", "Template not loaded!")
+            messagebox.showwarning("CertWizard", "Please load a template first!")
             return
 
         if not self.excel_data:
-            messagebox.showwarning("Warning", "No student data loaded!")
+            messagebox.showwarning("CertWizard", "Please load student data first!")
             return
 
         # Automatically select the first student
@@ -696,15 +716,15 @@ class CertificateApp:
 
     def generate_certificates(self):
         if not self.excel_data:
-            messagebox.showwarning("Warning", "No student data loaded!")
+            messagebox.showwarning("CertWizard", "Please load student data first!")
             return
     
         if not self.original_image:
-            messagebox.showwarning("Warning", "No template image loaded!")
+            messagebox.showwarning("CertWizard", "Please load a template first!")
             return
 
         # Ask user for color space
-        color_space = messagebox.askyesno("Color Space", 
+        color_space = messagebox.askyesno("CertWizard", 
             "Do you want to generate certificates in CMYK color space?\n\n" +
             "Yes = CMYK\nNo = RGB")
         
@@ -729,90 +749,99 @@ class CertificateApp:
         pdf_width = px_to_mm(img_width_px)
         pdf_height = px_to_mm(img_height_px)
     
-        # Update the progress bar
-        def update_progressbar(current, total):
+        # Update the progress bar and info
+        def update_progress(current, total):
             progress = (current / total) * 100
             self.progress['value'] = progress
-            self.master.update_idletasks()
+            self.update_info(f"Progress: {current}/{total} certificates ({progress:.1f}%)")
+            self.root.update_idletasks()
     
         # Certificate generation function
         def generate_certificates_in_thread():
             nonlocal generated_count
             total_students = len(self.excel_data)
             placeholder_positions = self.get_placeholder_positions()
-    
+            
+            # Clear and initialize info box
+            self.update_info("Starting certificate generation...", clear=True)
+            self.update_info(f"Total certificates to generate: {total_students}")
+            self.update_info(f"Color space: {self.color_space.get()}")
+            self.update_info(f"Output directory: {output_dir}")
+            self.update_info("----------------------------------------")
+
             for i, student in enumerate(self.excel_data):
-                pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
-                pdf.add_page()
+                try:
+                    # Update status for current certificate
+                    self.update_info(f"\nProcessing certificate {i+1}/{total_students}")
+                    self.update_info(f"Student: {student[self.fields[0]]}")
+                    
+                    pdf = FPDF(unit="mm", format=(pdf_width, pdf_height))
+                    pdf.add_page()
     
-                original_img = self.original_image.copy()
-                draw = ImageDraw.Draw(original_img)
+                    original_img = self.original_image.copy()
+                    draw = ImageDraw.Draw(original_img)
         
-                # Add text fields with exact positioning
-                for field in self.fields:
-                    if self.field_vars[field].get() and field in placeholder_positions:
-                        try:
-                            x, y = placeholder_positions[field]
-                            size = self.font_settings[field]["size"].get()
-                            color = self.font_settings[field]["color"].get()
-                            font_name = self.font_settings[field]["font_name"].get()
-                            
-                            # Get font with exact size
-                            font = self.get_font_with_style(font_name, size)
-
-                            # Get text and calculate exact width
-                            text = student[field]
-                            text_width = draw.textlength(text, font=font)
-                            
-                            # Calculate exact vertical position
+                    # Add text fields with exact positioning
+                    for field in self.fields:
+                        if self.field_vars[field].get() and field in placeholder_positions:
                             try:
-                                # Get exact text bbox
-                                bbox = font.getbbox(text)
-                                text_height = bbox[3] - bbox[1]
-                                y_offset = (size - text_height) // 2
-                            except:
-                                # Fallback to simple centering
-                                y_offset = 0
+                                x, y = placeholder_positions[field]
+                                size = self.font_settings[field]["size"].get()
+                                color = self.font_settings[field]["color"].get()
+                                font_name = self.font_settings[field]["font_name"].get()
+                                
+                                font = self.get_font_with_style(font_name, size)
+                                text = student[field]
+                                text_width = draw.textlength(text, font=font)
+                                
+                                try:
+                                    bbox = font.getbbox(text)
+                                    text_height = bbox[3] - bbox[1]
+                                    y_offset = (size - text_height) // 2
+                                except:
+                                    y_offset = 0
 
-                            # Center text horizontally and position vertically
-                            x = x - (text_width / 2)  # Center horizontally
-                            y = y - (size / 2) + y_offset  # Center vertically with offset
+                                x = x - (text_width / 2)
+                                y = y - (size / 2) + y_offset
 
-                            # Apply the text to the image with exact positioning
-                            draw.text((x, y), text, font=font, fill=self.hex_to_rgb(color))
-                        except Exception as e:
-                            print(f"Error drawing text for {field}: {e}")
+                                draw.text((x, y), text, font=font, fill=self.hex_to_rgb(color))
+                            except Exception as e:
+                                self.update_info(f"Warning: Error with field '{field}': {str(e)}")
     
-                temp_img_path = "temp_certificate.png"
-                original_img.save(temp_img_path)
+                    temp_img_path = "temp_certificate.png"
+                    original_img.save(temp_img_path)
     
-                pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
+                    pdf.image(temp_img_path, x=0, y=0, w=pdf_width, h=pdf_height)
     
-                # Use the first field as the filename
-                temp_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
-                temp_name2 = re.sub(r'[^\w\-_. ]', '', student[self.fields[1]]).strip()
-                safe_name = f"{temp_name}_{temp_name2}"
+                    temp_name = re.sub(r'[^\w\-_. ]', '', student[self.fields[0]]).strip()
+                    temp_name2 = re.sub(r'[^\w\-_. ]', '', student[self.fields[1]]).strip()
+                    safe_name = f"{temp_name}_{temp_name2}"
 
-                if self.color_space.get() == "CMYK":
-                    pdf_output_path = os.path.join(f"{output_dir}/CMYK", f"{safe_name}_certificate.pdf")
-                else:
-                    pdf_output_path = os.path.join(f"{output_dir}/RGB", f"{safe_name}_certificate.pdf")
-                pdf.output(pdf_output_path)
-                generated_count += 1
+                    if self.color_space.get() == "CMYK":
+                        pdf_output_path = os.path.join(f"{output_dir}/CMYK", f"{safe_name}_certificate.pdf")
+                    else:
+                        pdf_output_path = os.path.join(f"{output_dir}/RGB", f"{safe_name}_certificate.pdf")
+                    
+                    pdf.output(pdf_output_path)
+                    generated_count += 1
+                    self.update_info(f"Generated: {safe_name}_certificate.pdf")
     
-                if os.path.exists(temp_img_path):
-                    os.remove(temp_img_path)
+                    if os.path.exists(temp_img_path):
+                        os.remove(temp_img_path)
     
-                # Update progress after each certificate is generated
-                update_progressbar(i + 1, total_students)
+                    update_progress(i + 1, total_students)
+                except Exception as e:
+                    self.update_info(f"Error processing certificate {i+1}: {str(e)}")
     
+            self.update_info("\n----------------------------------------")
+            self.update_info(f"Generation complete! {generated_count} certificates generated.")
             self.root.after(0, notify_done)
+
         # Start the certificate generation in a separate thread
         threading.Thread(target=generate_certificates_in_thread, daemon=True).start()
 
         def notify_done():
-            messagebox.showinfo("Done", f"{generated_count} certificate(s) generated successfully!")
-            
+            messagebox.showinfo("CertWizard", f"{generated_count} certificate(s) generated successfully!")
 
     def save_project(self):
         if not self.original_image:
@@ -853,9 +882,9 @@ class CertificateApp:
             }
     
             file_path = filedialog.asksaveasfilename(
-                defaultextension=".certproj",
-                filetypes=[("Certificate Project", "*.certproj")],
-                initialfile="certificate_project.certproj"
+                defaultextension=".certwiz",
+                filetypes=[("CertWizard Project", "*.certwiz")],
+                initialfile="certwizard_project.certwiz"
             )
             
             if file_path:
@@ -868,8 +897,8 @@ class CertificateApp:
     def load_project(self):
         try:
             file_path = filedialog.askopenfilename(
-                filetypes=[("Certificate Project", "*.certproj")],
-                initialfile="certificate_project.certproj"
+                filetypes=[("CertWizard Project", "*.certwiz")],
+                initialfile="certwizard_project.certwiz"
             )
             if not file_path:
                 return
@@ -1047,12 +1076,26 @@ class CertificateApp:
 
     def update_status(self, message):
         """Update the status bar with a message"""
-        self.status_bar.config(text=message)
-        self.master.update_idletasks()
+        self.status_bar.config(text=f"CertWizard: {message}")
+        self.root.update_idletasks()
+
+    def update_info(self, message, clear=False):
+        """Update the information text box with a message"""
+        self.info_text.configure(state='normal')
+        if clear:
+            self.info_text.delete(1.0, tk.END)
+        self.info_text.insert(tk.END, f"{message}\n")
+        self.info_text.see(tk.END)  # Scroll to the end
+        self.info_text.configure(state='disabled')
+        self.root.update_idletasks()
 
 
 
 if __name__ == "__main__":
     root = tk.Tk()
+    # Set the taskbar title before creating the app
+    if platform.system() == 'Windows':
+        root.wm_attributes('-toolwindow', True)
+        root.wm_attributes('-toolwindow', False)
     app = CertificateApp(root)
     root.mainloop()
